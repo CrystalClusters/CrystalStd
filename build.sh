@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-# 平台识别：Windows 外全部归为 Unix Like 类
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+# 检测是否为Android
+if command -v getprop >/dev/null 2>&1; then
+    android_ver=$(getprop ro.build.version.release 2>/dev/null)
+    if [ -n "$android_ver"]; then
+        OS=android
+    fi
+fi
+
+# 非 Android 特殊情况
+if [ -x "$OS"]; then
+    OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+fi
 ARCH="$(uname -m)"
 
 # 规范化 CPU 架构
@@ -12,11 +22,14 @@ case "$ARCH" in
     *) echo "[错误] 不支持的 CPU 架构: $ARCH"; exit 1 ;;
 esac
 
-# 规范化平台（Android 亦基于 Linux 内核，可用环境变量覆盖细分）
+# 规范化平台
 case "$OS" in
-    linux)  PLATFORM=linux ;;
+    linux)   PLATFORM=linux ;;
+    android) PLATFORM=android;;
     *)      echo "[错误] 不支持的平台: $OS"; exit 1 ;;
 esac
+
+echo 当前为 $PLATFORM 平台，CPU 指令集架构：$ARCH
 
 # 分流到 scripts 中的细分脚本
 SCRIPT="$(cd "$(dirname "$0")" && pwd)/scripts/build_${PLATFORM}_${ARCH}.sh"
