@@ -37,6 +37,17 @@ out/         构建产物
 
 根目录下的基础构建脚本运行时会自动检测平台信息，然后运行 scripts 文件夹内对应的细分脚本。
 
+构建过程中源文件收集会借助 CrystalCluster 体系内的一个小工具 CrystalFilter 来实现，使用示例：
+
+```shell
+# windows
+.\filter.exe -./src -*.c
+# linux
+./filter.run -./src -*.c
+```
+
+该工具的仓库地址：[CrystalFilter](https://github.com/CrystalClusters/CrystalFilter)
+
 **注意：**
 
 > 链接 `libCrystalStd.a` 时需加 `-Wl,--whole-archive ... -Wl,--no-whole-archive`（或 `-Wl,-u,_inner_init_ -Wl,-u,_inner_deinit_`），否则 `crystal_std.c` 的 **自动初始化/逆初始化** 会被归档抽取规则丢弃。详见[开发手册](docs/开发手册.md)「链接注意事项（自动初始化 / 逆初始化）」
