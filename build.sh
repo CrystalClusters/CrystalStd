@@ -4,13 +4,13 @@ set -e
 # 检测是否为Android
 if command -v getprop >/dev/null 2>&1; then
     android_ver=$(getprop ro.build.version.release 2>/dev/null)
-    if [ -n "$android_ver"]; then
+    if [ -n "$android_ver" ]; then
         OS=android
     fi
 fi
 
 # 非 Android 特殊情况
-if [ -x "$OS"]; then
+if [ -z "$OS" ]; then
     OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 fi
 ARCH="$(uname -m)"
