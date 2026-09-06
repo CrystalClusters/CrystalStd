@@ -2,19 +2,10 @@
 :: Please save as GBK
 setlocal enabledelayedexpansion
 
-:: 平台识别：Windows 体系
-:: 依据 PROCESSOR_ARCHITECTURE 判断 CPU 架构
+:: 平台信息检测识别
+for /f "delims=" %%i in ('call "%~dp0scripts\detect.bat"') do set "PLATFORM_STR=%%i"
 
-if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
-    set ARCH=arm64
-) else if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
-    set ARCH=amd64
-) else (
-    echo [错误] 不支持的 CPU 架构: %PROCESSOR_ARCHITECTURE%
-    exit /b 1
-)
-
-echo 当前为 Windows 平台，CPU 指令集架构：%ARCH%
+echo 当前平台为：【%PLATFORM_STR%】
 
 :: 工具链检测：未通过则中止构建
 set CHECK=%~dp0scripts\check.bat
@@ -29,7 +20,7 @@ if errorlevel 1 (
 )
 
 ::拼接工具路径
-set FILTER=tools\windows_%ARCH%\filter.exe
+set FILTER=tools\%PLATFORM_STR%\filter.exe
 echo %FILTER%
 
 ::创建输出目录
@@ -51,10 +42,9 @@ for /f "delims=" %%s in ('"%FILTER%" -./src -*.c') do (
     )
 )
 
-
 :: 打包静态库（交由 build_lib.bat）
 echo 生成静态库...
-call scripts\build_lib.bat windows_%ARCH%
+call scripts\build_lib.bat %PLATFORM_STR%
 if errorlevel 1 (
     echo [错误] 打包静态库失败，中止。
     exit /b 1
@@ -62,7 +52,7 @@ if errorlevel 1 (
 
 :: 编译测试程序
 echo 生成测试程序...
-call scripts\build_test.bat windows_%ARCH%
+call scripts\build_test.bat %PLATFORM_STR%
 if errorlevel 1 (
     echo [错误] 编译测试程序失败，中止。
     exit /b 1

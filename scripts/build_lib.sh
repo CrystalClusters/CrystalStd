@@ -14,26 +14,26 @@ PFX=$1
 ROOT=$(cd $(dirname $0)/.. && pwd)
 cd ${ROOT}
 
-OBJ_DIR=out/obj
-BIN_DIR=out/${PFX}_bin
-FILTER=tools/${PFX}/filter.run
+OBJ_DIR="out/obj"
+BIN_DIR="out/${PFX}_bin"
+FILTER="tools/${PFX}/filter.run"
 
-if [ ! -f "$FILTER" ]; then
-    echo "[错误] 找不到 filter 工具: $FILTER"
+if [ ! -f "${FILTER}" ]; then
+    echo "[错误] 找不到 filter 工具: ${FILTER}"
     exit 1
 fi
-if [ ! -d "$OBJ_DIR" ]; then
-    echo "[错误] 未找到 obj 目录: $OBJ_DIR"
+if [ ! -d "${OBJ_DIR}" ]; then
+    echo "[错误] 未找到 obj 目录: ${OBJ_DIR}"
     exit 1
 fi
 
-mkdir -p $BIN_DIR
+mkdir -p ${BIN_DIR}
 
 echo "开始打包静态库..."
 OBJ_FILES=$($FILTER -./$OBJ_DIR -*.o) || true
-if [ -z "$OBJ_FILES" ]; then
+if [ -z "${OBJ_FILES}" ]; then
     echo "[错误] 未扫描到目标文件(.o)，中止打包。"
     exit 1
 fi
-ar rcs $BIN_DIR/libCrystalStd.a $OBJ_FILES
-echo "已生成静态库：$BIN_DIR/libCrystalStd.a"
+ar rcs ${BIN_DIR}/libCrystalStd.a ${OBJ_FILES}
+echo "已生成静态库：${BIN_DIR}/libCrystalStd.a"

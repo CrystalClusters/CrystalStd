@@ -12,7 +12,7 @@ PFX="$1"
 
 # 定位项目根并切换（本脚本位于 scripts/ 下）
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-cd "$ROOT"
+cd "${ROOT}"
 
 BIN_DIR="out/${PFX}_bin"
 LIB="${BIN_DIR}/libCrystalStd.a"
