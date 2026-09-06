@@ -1069,6 +1069,7 @@ CCINT32 color_print(const char *pattern, ...)
     {
         fwrite(out_buffer, buffer_counter, 1, stdout);
         counter += buffer_counter;
+        buffer_counter = 0; // 清零，避免 reset_color 内部的 flush_buffer 重复写出尾部
     }
     // 若颜色曾被修改，恢复终端默认颜色
     if (color_modified)

@@ -9,15 +9,85 @@
 
 #include "test_header.h"
 
-/**
- * color_print 的测试，一部分只能人工核查。
+/*
+ * color_print 的返回值 = 输出的可见字符数（%c_XY 颜色控制符、ANSI 转义码不计入）。
+ * 据此可自动断言返回值契约；颜色本身的呈现（前景/背景/复位）只能人工判断。
  */
-void test_color_print(void)
+
+static CCINT32 passed = 0;      // 自动用例通过数
+static CCINT32 failed = 0;      // 自动用例失败数
+static CCUINT32 case_code = 1;  // 自动用例编号
+static CCUINT32 manual_code = 1;// 人工判断编号
+
+/* 自动用例断言：校验 color_print 返回值（可见字符数） */
+static void _expect_(const char *name, CCINT32 expected, CCINT32 got)
+{
+    if (expected == got)
+    {
+        passed++;
+        color_print(
+            CC_TEXT_COLOR(CC_CYAN, CC_DEFAULT) "[case%u]"
+            CC_TEXT_COLOR(CC_GREEN, CC_DEFAULT) "[PASS] "
+            CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "%s | expected %d, got %d\n",
+            case_code++, name, expected, got
+        );
+    }
+    else
+    {
+        failed++;
+        color_print(
+            CC_TEXT_COLOR(CC_CYAN, CC_DEFAULT) "[case%u]"
+            CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[FAIL] "
+            CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "%s | expected %d, got %d\n",
+            case_code++, name, expected, got
+        );
+    }
+}
+
+/* 人工判断用例：仅打印标题，供肉眼核对，不计入 passed/failed */
+static void _manual_(const char *title)
+{
+    color_print(
+        CC_TEXT_COLOR(CC_CYAN, CC_DEFAULT) "[manual_case%u]"
+        CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[人工判定]"
+        CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "%s\n",
+        manual_code++, title
+    );
+}
+
+/*
+ * 自动测试：color_print 返回值（可见字符计数）。
+ * 每个用例先输出其有效负载（便于肉眼对照），随后打印 [PASS]/[FAIL] 结论。
+ */
+static void _test_auto_(void)
+{
+    _expect_("plain text", 6, color_print("hello\n"));
+    _expect_("multi newline", 4, color_print("a\nb\n"));
+    _expect_("color + text", 3, color_print(CC_TEXT_COLOR(CC_GREEN, CC_DEFAULT) "OK\n"));
+    _expect_("color not consume arg", 2, color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "%d\n", 7));
+    _expect_("reset both (%c_00)", 6, color_print(CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "reset\n"));
+    _expect_("color + mid reset", 3, color_print("%c_20a%c_00b\n"));
+    _expect_("%d", 5, color_print("n=%d\n", 42));
+    _expect_("%d negative", 5, color_print("%d\n", -123));
+    _expect_("%u max", 11, color_print("%u\n", 4294967295u));
+    _expect_("%x", 11, color_print("%x\n", 0xABCDu));
+    _expect_("%ld", 14, color_print("%ld\n", (CCINT64)1234567890123LL));
+    _expect_("%s", 4, color_print("%s\n", "abc"));
+    _expect_("%s null", 7, color_print("%s\n", (const char*)NULL));
+    _expect_("%c", 2, color_print("%c\n", 'x'));
+    _expect_("%% literal", 2, color_print("%%\n"));
+    _expect_("%f", 9, color_print("%f\n", 1.5));
+    _expect_("%.2f", 5, color_print("%.2f\n", 3.14159));
+    _expect_("invalid hex fallback", 5, color_print("%c_GG\n", 'x'));
+}
+
+/* 人工测试：仅供肉眼核对颜色呈现，不计入统计 */
+static void _test_manual_(void)
 {
     // 16x16 色块矩阵
+    _manual_("16x16色块矩阵（前景x背景）：核对每个格子的颜色组合");
     color_print(
-        CC_TEXT_COLOR(CC_CYAN, CC_DEFAULT) "[case1]"
-        CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[人工判断]16x16矩阵:\n"
+        "16x16矩阵:\n"
         // 表头
         "%c_00    "
         "%c_10 1 %c_20 2 %c_30 3 %c_40 4 %c_50 5 %c_60 6 %c_70 7 "
@@ -55,4 +125,23 @@ void test_color_print(void)
         "%c_8F @ %c_9F @ %c_AF @ %c_BF @ %c_CF @ %c_DF @ %c_EF @ %c_FF @\n"
     );
 
+    // 单项/双向复位为默认色
+    _manual_("默认色复位：红色前景应复位为默认，绿色背景应复位为默认");
+    color_print(
+        CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "红色前景第一行\n红色前景第二行（延续测试）"
+        CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "前景已复位"
+        CC_TEXT_COLOR(CC_BLUE, CC_GREEN) "绿色背景"
+        CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT) "背景已复位\n"
+    );
+}
+
+void test_color_print(void)
+{
+    _test_auto_();
+    _test_manual_();
+    color_print(
+        CC_TEXT_COLOR(CC_CYAN, CC_DEFAULT)
+        "total: %d, passed: %d, failed: %d（人工判断项不计入统计）\n",
+        passed + failed, passed, failed
+    );
 }
