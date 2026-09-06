@@ -23,12 +23,13 @@
 #define MAX_OUT_BUFFER 512
 
 // 颜色查找表
+// 索引 0（CC_DEFAULT）表示“复位该项为终端默认色”：前景 39 / 背景 49（标准 SGR）
 static const char *fg_ansi[16] = {
-    "", "31", "32", "33", "34", "35", "36", "37",
+    "39", "31", "32", "33", "34", "35", "36", "37",
     "90", "91", "92", "93", "94", "95", "96", "97"
 };
 static const char *bg_ansi[16] = {
-    "", "41", "42", "43", "44", "45", "46", "47",
+    "49", "41", "42", "43", "44", "45", "46", "47",
     "100", "101", "102", "103", "104", "105", "106", "107"
 };
 
@@ -185,51 +186,43 @@ static inline CCUINT32 hex2int(char c)
 }
 
 /**
- * 输出 ANSI 颜色序列到 stdout（vt_enabled 为真时调用）
+ * 输出 ANSI 颜色序列到 stdout（vt_enabled 为真时调用）。
+ * fg/bg 为 0（CC_DEFAULT）时对应输出 39/49，即复位该项为默认色。
  */
 static void write_ansi_color(CCUINT32 fg, CCUINT32 bg)
 {
-    if(fg>=16 || bg>=16)
-        return;
-    // fg/bg 均为 0 时无操作
-    if (fg == 0 && bg == 0)
+    if (fg>=16 || bg>=16)
         return;
 
     fwrite("\033[", 2, 1, stdout);
-    if (fg != 0)
+    fwrite(fg_ansi[fg], 2, 1, stdout); /* FG 始终 2 字符，0→"39" */
+    fwrite(";", 1, 1, stdout);
     {
-        fwrite(fg_ansi[fg], 2, 1, stdout); /* FG 始终 2 字符 */
-        if (bg != 0)
-            fwrite(";", 1, 1, stdout);
-    }
-    if (bg != 0)
-    {
-        CCUINT32 bg_len = (bg >= 8) ? 3 : 2; /* "41"=2 / "100"=3 */
+        CCUINT32 bg_len = (bg >= 8) ? 3 : 2; /* "49"/"41"=2 / "100"=3 */
         fwrite(bg_ansi[bg], bg_len, 1, stdout);
     }
     fwrite("m", 1, 1, stdout);
 }
 
 #ifdef CC_WINDOWS
+#define CC_FG_MASK (WORD)(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+#define CC_BG_MASK (WORD)(BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY)
+
 static void write_win32_color(CCUINT32 fg, CCUINT32 bg)
 {
     if (hConsole == NULL)
         return;
 
-    WORD attr = 0;
-    if (attrs_saved)
-        attr = original_attrs;
+    WORD attr = attrs_saved ? original_attrs : 0;
 
-    if (fg != 0)
-    {
-        attr &= ~((WORD)(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY));
-        attr |= fg_win32[fg];
-    }
-    if (bg != 0)
-    {
-        attr &= ~((WORD)(BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | BACKGROUND_INTENSITY));
-        attr |= bg_win32[bg];
-    }
+    // 前景：0=默认→恢复 original_attrs 的前景位；否则置为指定色
+    attr &= ~CC_FG_MASK;
+    attr |= (fg == 0) ? (WORD)(original_attrs & CC_FG_MASK) : fg_win32[fg];
+
+    // 背景：0=默认→恢复 original_attrs 的背景位；否则置为指定色
+    attr &= ~CC_BG_MASK;
+    attr |= (bg == 0) ? (WORD)(original_attrs & CC_BG_MASK) : bg_win32[bg];
+
     SetConsoleTextAttribute(hConsole, attr);
 }
 
@@ -399,12 +392,11 @@ static inline CCUINT32 fmt_color(
         return fmt_char(p_args, out_buffer, p_buffer_counter, p_counter);
     }
 
-    // 至少有一项非 0 才执行颜色操作
+    // 0（CC_DEFAULT）表示复位该项为默认色，因此任何组合都应执行一次 set_color
+    set_color(fg, bg, out_buffer, p_buffer_counter, p_counter);
+    // 仅在出现非默认色时置位，供调用结束后一次性复位终端（\033[0m）
     if (fg != 0 || bg != 0)
-    {
-        set_color(fg, bg, out_buffer, p_buffer_counter, p_counter);
         *p_color_modified = CCTRUE;
-    }
     // 更新当前颜色状态，供跨行重新应用
     *p_cur_fg = fg;
     *p_cur_bg = bg;

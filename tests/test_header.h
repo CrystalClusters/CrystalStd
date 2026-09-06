@@ -13,11 +13,15 @@
 #include <cc_atoi.h>
 #include <color_print.h>
 
-void test_cc_atoi(void);
+/**
+ * 基础泛用功能测试
+ */
+void test_basic(void);
 
 /**
- * 成功返回CCTRUE，失败返回CCFALSE
+ * 专项功能测试
  */
-void test_cc_atoi(void);
+
+void test_color_print(void);
 
 #endif
