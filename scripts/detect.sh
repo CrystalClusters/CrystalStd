@@ -2,7 +2,7 @@
 set -e
 
 # 检测是否为 Android（优先）
-OS="unknown"
+OS=""
 if command -v getprop >/dev/null 2>&1; then
     android_ver="$(getprop ro.build.version.release 2>/dev/null)"
     if [ -n "${android_ver}" ]; then
