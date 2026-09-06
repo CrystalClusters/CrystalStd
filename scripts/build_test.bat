@@ -23,7 +23,7 @@ if not exist "tests\test.c" (
 )
 
 echo ±‡“Î≤‚ ‘≥Ã–Ú...
-gcc tests\test.c -o "%BIN_DIR%\test.exe" -Iinclude -fexec-charset=GBK -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive
+gcc tests\basic.c tests\test.c -o "%BIN_DIR%\test.exe" -Iinclude -fexec-charset=GBK -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive
 if errorlevel 1 (
     echo [¥ÌŒÛ] ±‡“Î≤‚ ‘≥Ã–Ú ß∞‹°£
     exit /b 1

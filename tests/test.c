@@ -7,10 +7,21 @@
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
  */
 
-#include <color_print.h>
+#include "test_header.h"
+
+static void _inner_print_usage_()
+{
+    
+}
+
+static int _direct_run_(const char *arg)
+{
+
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
-    color_print("待编写测试用例\n");
+    test_cc_atoi();
     return 0;
 }
