@@ -27,9 +27,8 @@ out/         构建产物
 
 |平台|脚本|
 |---|---|
-|Linux|`build.sh`|
+|Linux 及其他 Unix Like|`build.sh`|
 |Windows|`build.bat`|
-|Android|`build.sh`|
 
 > 注：通常将 Windows 体系归为一类，使用`build.bat`脚本，Windows 外全部归类到 Unix Like 类，使用`build.sh`脚本。
 
@@ -58,16 +57,16 @@ out/         构建产物
 out/
 ├── obj/               中间目标文件（.o）
 ├── libCrystalStd.a    静态库
-└── test_runner(.exe)  测试程序
+└── test(.exe)  测试程序
 ```
 
 # 测试
 
-运行测试程序即可执行全部自测：
+运行自动测试脚本即可执行全部自测：
 
 ```bash
-./out/test_runner          # Linux
-out\\test_runner.exe       # Windows
+./run_test.sh        # Linux
+.\run_test.bat       # Windows
 ```
 
 # 文档
