@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# 用法: bash build_test.sh <platform_arch>
-#   示例: bash build_test.sh linux_amd64 | android_arm64 | windows_amd64
-# 行为: 编译 tests/test.c 并链接 libCrystalStd.a，产出 out/<platform_arch>_bin/test
 set -e
 
 if [ $# -lt 1 ] || [ -z "$1" ]; then
@@ -27,7 +24,8 @@ if [ ! -f "${SRC}" ]; then
     exit 1
 fi
 
-echo "编译测试程序..."
+SRC=$("${FILTER}" -./tests -*.c)
+
 gcc ${SRC} -o ${BIN_DIR}/test -Iinclude \
     -Wl,--whole-archive "${LIB}" -Wl,--no-whole-archive
 echo "已生成测试程序：${BIN_DIR}/test"

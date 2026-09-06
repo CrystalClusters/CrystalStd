@@ -21,25 +21,7 @@ fi
 FILTER="tools/${PLATFORM_STR}/filter.run"
 echo "${FILTER}"
 
-# 创建输出目录（中间目标文件）
-OBJ_DIR="out/obj"
-mkdir -p ${OBJ_DIR}
-
-# 逐个编译obj
-echo 开始编译源文件...
-while IFS= read -r src; do
-    name="${src#./}"             # 去 ./ 前缀
-    name="${name%.c}.o"          # 扩展名 .c -> .o
-    name="${name//\//_}"         # 路径前缀：/ -> _
-    obj="${OBJ_DIR}/${name}"
-    echo "编译 ${src} -> ${obj}"
-    if ! gcc -c "${src}" -o "${obj}" -Iinclude -Isrc; then
-        echo "[错误] 编译失败：${src}"
-        exit 1
-    fi
-done < <("${FILTER}" -./src -*.c)
-
-# 打包静态库
+# 生成静态库
 echo "生成静态库..."
 bash scripts/build_lib.sh ${PLATFORM_STR}
 

@@ -1,9 +1,8 @@
 @echo off
 :: Please save as GBK
-:: 用法: call build_test.bat <platform_arch>
-::   示例: call build_test.bat windows_amd64
-:: 行为: 编译 tests\test.c 并链接 libCrystalStd.a，产出 out\<platform_arch>_bin\test.exe
 setlocal enabledelayedexpansion
+:: 切换到项目根目录（假设本脚本位于 scripts/ 下）
+pushd "%~dp0.." || exit /b 1
 
 if "%~1"=="" (
     echo [错误] 用法: call build_test.bat ^<platform_arch^>
@@ -22,8 +21,19 @@ if not exist "tests\test.c" (
     exit /b 1
 )
 
-echo 编译测试程序...
-gcc tests\basic.c tests\test.c -o "%BIN_DIR%\test.exe" -Iinclude -fexec-charset=GBK -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive
+:: 设置 filter 工具路径
+set "FILTER=tools\%PFX%\filter.exe"
+if not exist "%FILTER%" (
+    echo [错误] 找不到 filter 工具: %FILTER%
+    popd
+    exit /b 1
+)
+
+:: 收集源码
+set SRCS=
+for /f "delims=" %%s in ('"%FILTER%" -./tests -*.c') do set "SRCS=!SRCS! %%s"
+
+gcc !SRCS! -o "%BIN_DIR%\test.exe" -Iinclude -fexec-charset=GBK -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive
 if errorlevel 1 (
     echo [错误] 编译测试程序失败。
     exit /b 1

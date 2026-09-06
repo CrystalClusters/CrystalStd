@@ -23,26 +23,7 @@ if errorlevel 1 (
 set FILTER=tools\%PLATFORM_STR%\filter.exe
 echo %FILTER%
 
-::创建输出目录
-set OBJ_DIR=out\obj
-if not exist "%OBJ_DIR%" mkdir "%OBJ_DIR%"
-
-::逐个编译obj
-echo 开始编译源文件...
-for /f "delims=" %%s in ('"%FILTER%" -./src -*.c') do (
-    set name=%%s
-    set name=!name:./=!
-    set name=!name:.c=.o!
-    set name=!name:/=_!
-    echo 编译 %%s -^> %OBJ_DIR%\!name!
-    gcc -c %%s -o %OBJ_DIR%\!name! -Iinclude -Isrc -fexec-charset=GBK
-    if errorlevel 1 (
-        echo [错误] 编译失败: %%s
-        exit /b 1
-    )
-)
-
-:: 打包静态库（交由 build_lib.bat）
+:: 打生成静态库
 echo 生成静态库...
 call scripts\build_lib.bat %PLATFORM_STR%
 if errorlevel 1 (

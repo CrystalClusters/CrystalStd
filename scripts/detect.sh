@@ -23,5 +23,4 @@ case "${ARCH}" in
     *) ARCH="unknown" ;;
 esac
 
-# 输出平台描述串
 echo "${OS}_${ARCH}"
