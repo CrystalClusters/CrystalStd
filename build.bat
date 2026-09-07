@@ -19,10 +19,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-::拼接工具路径
-set FILTER=tools\%PLATFORM_STR%\filter.exe
-echo %FILTER%
-
 :: 打生成静态库
 echo 生成静态库...
 call scripts\build_lib.bat %PLATFORM_STR%

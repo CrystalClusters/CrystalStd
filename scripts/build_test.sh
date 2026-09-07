@@ -24,14 +24,8 @@ if [ ! -f "${SRC}" ]; then
     exit 1
 fi
 
-# 拼接filter路径
-FILTER="tools/${PFX}/filter.run"
-if [ ! -x "${FILTER}" ]; then
-    echo "[错误] 找不到可执行的 filter 工具: ${FILTER}"
-fi
-
 # 收集源码
-SRC=$("${FILTER}" -./tests -*.c)
+SRC=$(find ./tests -name '*.c')
 
 gcc ${SRC} -o ${BIN_DIR}/test -Iinclude \
     -Wl,--whole-archive "${LIB}" -Wl,--no-whole-archive

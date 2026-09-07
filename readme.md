@@ -17,7 +17,6 @@ include/     公开头文件（对外API）
 scripts/     各平台细分构建脚本
 src/         源码、内部头文件
 tests/       测试用例
-tools/       平台辅助工具
 out/         构建产物
 ```
 
@@ -36,16 +35,15 @@ out/         构建产物
 
 根目录下的基础构建脚本运行时会自动检测平台信息，然后运行 scripts 文件夹内对应的细分脚本。
 
-构建过程中源文件收集会借助 CrystalCluster 体系内的一个小工具 CrystalFilter 来实现，使用示例：
+构建过程中源文件收集使用 Shell 原生指令实现：
 
 ```shell
-# windows
-.\filter.exe -./src -*.c
-# linux
-./filter.run -./src -*.c
-```
+# Unix Like / Android：递归收集指定目录下源码（输出形如 ./src/xxx.c）
+find ./src -name '*.c'
 
-该工具的仓库地址：[CrystalFilter](https://github.com/CrystalClusters/CrystalFilter)
+# Windows：递归收集并逐个处理
+for /r src %%s in (*.c) do ...
+```
 
 **注意：**
 

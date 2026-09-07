@@ -13,16 +13,10 @@ cd ${ROOT}
 
 OBJ_DIR="out/obj"
 BIN_DIR="out/${PFX}_bin"
-FILTER="tools/${PFX}/filter.run"
 
 # 创建输出目录（中间目标文件）
 mkdir -p ${OBJ_DIR}
 mkdir -p ${BIN_DIR}
-
-if [ ! -f "${FILTER}" ]; then
-    echo "[错误] 找不到 filter 工具: ${FILTER}"
-    exit 1
-fi
 
 # 逐个编译obj
 while IFS= read -r src; do
@@ -35,9 +29,9 @@ while IFS= read -r src; do
         echo "[错误] 编译失败：${src}"
         exit 1
     fi
-done < <("${FILTER}" -./src -*.c)
+done < <(find ./src -name '*.c')
 
-OBJ_FILES=$($FILTER -./$OBJ_DIR -*.o)
+OBJ_FILES=$(find ./$OBJ_DIR -name '*.o')
 if [ -z "${OBJ_FILES}" ]; then
     echo "[错误] 未扫描到目标文件(.o)，中止打包。"
     exit 1

@@ -17,10 +17,6 @@ if ! bash "${CHECK}"; then
     exit 1
 fi
 
-# 拼接工具路径
-FILTER="tools/${PLATFORM_STR}/filter.run"
-echo "${FILTER}"
-
 # 生成静态库
 echo "生成静态库..."
 bash scripts/build_lib.sh ${PLATFORM_STR}
