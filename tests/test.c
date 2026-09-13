@@ -21,6 +21,9 @@ static int _inner_direct_run_(CCINT32 index)
     case 1:
         test_color_print();
         break;
+    case 2:
+        test_rbt_core();
+        break;
     default:
         break;
     }
@@ -32,6 +35,7 @@ static void _inner_print_usage_(void)
     color_print("键入选项以指定测试条目：\n");
     color_print("0：基础测试\n");
     color_print("1：color_print专项\n");
+    color_print("2：红黑树内核专项\n");
     color_print("q：退出\n");
     color_print("输入选项并回车：");
 }

@@ -24,4 +24,9 @@ void test_basic(void);
 
 void test_color_print(void);
 
+/**
+ * 红黑树内核测试
+ */
+void test_rbt_core(void);
+
 #endif

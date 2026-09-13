@@ -25,6 +25,21 @@ CCINT32 cc_rbt_core_inorder_tranverse(CC_RbtOps *ops, void *root, void *user, CC
 - `key`：节点键值，和指针等宽的整型
 - `cbk`：遍历时提供操作的回调函数
 
+**返回值：**
+- **cc_rbt_core_insert：**
+`0`插入成功；`1`键值重复（树未发生变动）；`-1`参数非法（`ops`或`node`为空）。
+- **cc_rbt_core_remove：**
+成功时返回被物理摘除的节点指针，由调用方负责回收；未检索到对应`key`、`ops`为空、或无法取得/拷贝替换节点时返回`NULL`。
+- **cc_rbt_core_get：**
+命中时返回对应节点指针；未命中或`ops`为空时返回`NULL`。
+- **cc_rbt_core_inorder_tranverse：**
+正常遍历完毕返回`0`；`cbk`返回非`0`时立即中断并透传该值；参数非法（`ops`或`cbk`为空）返回`-1`。
+
+**注意事项：**
+- `root`为值传递，内核无法改写调用方持有的根指针；根节点一旦变化（首次插入、旋转、删除根等），内核会调用`ch_root`通知，调用方必须在该回调中更新自身的根指针。
+- 当被删节点拥有两个子节点时，内核使用`find_instead`取得替换节点、`copy_node`拷贝数据，随后物理摘除替换节点；`cc_rbt_core_remove`返回该替换节点。如果想要获取检索到的节点（以使用其中数据），请使用`cc_rbt_core_get`。
+- `set_node`只修改`node_1`的对应挂载点的指针，不修改`node_2`。
+
 ## 2. CC_RbtOps
 
 ### 2.1结构体定义

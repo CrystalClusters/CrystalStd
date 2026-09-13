@@ -12,6 +12,7 @@
 
 #include <crystal_cluster.h>
 #include <color_print.h>
+#include <cc_rbt.h>
 
 //
 // 初始化color_print的内部接口
