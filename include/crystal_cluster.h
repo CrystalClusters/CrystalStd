@@ -49,4 +49,10 @@ typedef intptr_t CCINTPTR;
 #define CC_RUN_BEFORE_MAIN __attribute__((constructor))
 #define CC_RUN_AFTER_MAIN  __attribute__((destructor))
 
+/**
+ * 通用函数签名定义
+ */
+
+typedef CCINT32(*CCDataCallback)(void *data, void *user);
+
 #endif
