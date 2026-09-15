@@ -47,7 +47,7 @@ for /r src %%s in (*.c) do ...
 
 **注意：**
 
-> 链接 `libCrystalStd.a` 时需加 `-Wl,--whole-archive ... -Wl,--no-whole-archive`（或 `-Wl,-u,_inner_init_ -Wl,-u,_inner_deinit_`），否则 `crystal_std.c` 的 **自动初始化/逆初始化** 会被归档抽取规则丢弃。详见[开发手册](docs/开发手册.md)「链接注意事项（自动初始化 / 逆初始化）」
+> 链接 `libCrystalStd.a` 时需加 `-Wl,--whole-archive ... -Wl,--no-whole-archive`（或 `-Wl,-u,_inner_init_ -Wl,-u,_inner_deinit_`），否则 `crystal_std.c` 的 **自动初始化/逆初始化** 会被归档抽取规则丢弃。详见[开发手册](docs/开发手册.md)。
 
 **产物：**
 

@@ -156,7 +156,7 @@ typedef struct cc_rbt_ops {
 
 返回值：
 - `CCTRUE`：参考节点为红色节点。
-- `CCFALSE`：参考姐弟啊那位黑色节点或参考节点不存在。
+- `CCFALSE`：参考节点为黑色节点或参考节点不存在。
 
 **set_color：**
 参数：
