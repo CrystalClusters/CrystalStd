@@ -32,7 +32,7 @@ CCINT32 color_print(const char* pattern, ...);
 |`%.lf`|`double`|双精度浮点数输出，默认6位小数|
 |`%.Nlf`|`double`|指定 `N` 位小数的双精度浮点数输出（N≤15）|
 |`%p`|`CCUINTPTR`|指针，位宽自适应，以当前平台位宽为准，输出格式与十六进制输出类似（带0x前缀）|
-|`%C_HH`|无|颜色控制，其中 `H` 对应一个十六进制数，前后两个十六进制数分别控制前景色和背景色|
+|`%c_HH`|无|颜色控制，其中 `H` 对应一个十六进制数，前后两个十六进制数分别控制前景色和背景色|
 
 > 浮点数额外支持 NaN、Inf、-Inf 特殊值；数值 >= 2^64 时自动切换科学计数法（e±d）。
 
@@ -84,7 +84,7 @@ color_print("%c_20绿色前景，默认背景\n");
 用法示例：
 
 ```C
-color_print(CC_TEXT_COLOR(CC_RED, CC_BLACK) "错误\n");
+color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "错误\n");
 ```
 
 ## 3.实现架构

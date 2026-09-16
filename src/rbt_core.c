@@ -387,4 +387,3 @@ CCINT32 cc_rbt_core_inorder_tranverse(CC_RbtOps *ops, void *root, void *user, CC
         return -1;
     return inorder_rec(ops, root, user, cbk);
 }
-

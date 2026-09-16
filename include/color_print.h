@@ -47,9 +47,10 @@
  * 颜色代码：0~F 十六进制，位置决定角色（前景/背景）。
  *
  * 示例：
- *   color_print(CC_TEXT_COLOR(CC_GREEN, CC_DEFAULT) "OK\n");   // 绿字 + 默认背景
- *   color_print(CC_TEXT_COLOR(CC_RED, CC_BLACK) "错误\n");     // 红字黑底
- *   color_print("%c_20绿色文本\n");
+ * color_print(CC_TEXT_COLOR(CC_GREEN, CC_DEFAULT) "OK\n");   // 绿字 + 默认背景
+ * color_print(CC_TEXT_COLOR(CC_RED, CC_GRAY) "错误\n");      // 红字灰底
+ * color_print("%c_20绿色文本\n");
+ * 
  * CC_TEXT_COLOR 中某一项填 CC_DEFAULT 表示该项单独复位为默认色，
  * 两项均填 CC_DEFAULT（%c_00）即前景、背景同时复位为默认。
  * 调用结束后自动恢复终端默认颜色（仅当颜色曾被修改时）。

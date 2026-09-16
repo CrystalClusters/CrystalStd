@@ -19,6 +19,8 @@ static CCINT32 failed = 0;      // 自动用例失败数
 static CCUINT32 case_code = 1;  // 自动用例编号
 static CCUINT32 manual_code = 1;// 人工判断编号
 
+CCINT32 test_color_print_failures(void) { return failed; }
+
 /* 自动用例断言：校验 color_print 返回值（可见字符数） */
 static void _expect_(const char *name, CCINT32 expected, CCINT32 got)
 {

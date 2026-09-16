@@ -3,7 +3,7 @@
  * @Date: 2026-08
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-09
- * @Description: 开发文档参考项目根目录起：docs\dev\彩色输出.md
+ * @Description: 
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 #include "crystal_std_inner_header.h"
@@ -290,14 +290,18 @@ static inline void newline_recolor(
         fwrite("\033[0m\n", 5, 1, stdout);
         write_ansi_color(cur_fg, cur_bg);
     }
-#ifdef CC_WINDOWS
     else
     {
+#ifdef CC_WINDOWS
         write_win32_reset();
         fwrite("\n", 1, 1, stdout);
         write_win32_color(cur_fg, cur_bg);
-    }
+#else
+        (void)cur_fg;
+        (void)cur_bg;
+        fwrite("\n", 1, 1, stdout);
 #endif
+    }
     // 换行符是可见字符，计入返回值（不含 ANSI 转义码）
     (*p_counter)++;
 }

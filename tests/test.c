@@ -27,7 +27,9 @@ static int _inner_direct_run_(CCINT32 index)
     default:
         break;
     }
-    return 0;
+    // 任一组用例存在失败即返回非 0，便于脚本/CI 判断结果
+    CCINT32 failures = test_basic_failures() + test_color_print_failures() + test_rbt_failures();
+    return failures ? 1 : 0;
 }
 
 static void _inner_print_usage_(void)
@@ -68,14 +70,17 @@ static CCBOOL _inner_read_choice_(char *buf, CCUINT32 size)
 int main(int argc, char **argv)
 {
     if (argc > 1) return _inner_direct_run_(cc_atoi(argv[1]));
+    CCINT32 code = 0;
     while (CCTRUE)
     {
         char buffer[64];
         _inner_print_usage_();
-        _inner_read_choice_(buffer, sizeof(buffer));
+        // stdin 已结束（无终端、被重定向到空）时退出交互：避免自动化调用下空转刷屏
+        if (!_inner_read_choice_(buffer, sizeof(buffer)))
+            break;
         if (!strcmp(buffer, "q"))
             break;
-        _inner_direct_run_(cc_atoi(buffer));
+        code = _inner_direct_run_(cc_atoi(buffer));
     }
-    return 0;
+    return code;
 }

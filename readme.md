@@ -53,19 +53,32 @@ for /r src %%s in (*.c) do ...
 
 ```
 out/
-├── obj/               中间目标文件（.o）
-├── libCrystalStd.a    静态库
-└── test(.exe)  测试程序
+├── obj/                  中间目标文件（.o）
+└── <平台>_bin/           按平台架构命名的产物目录
+    ├── libCrystalStd.a   静态库
+    └── test(.exe)        测试程序
 ```
 
 # 测试
 
-运行自动测试脚本即可执行全部自测：
+运行测试脚本即可启动自测程序：
 
 ```bash
 ./run_test.sh        # Linux
 .\run_test.bat       # Windows
 ```
+
+程序启动后进入交互菜单，键入条目编号即可执行对应测试组，`q` 退出。
+
+命令行可直接调用测试程序，以编号为参数指定单个测试组（跳过菜单，便于自动化测试）：
+
+```bash
+out/<平台>_bin/test 0    # 基础测试
+out/<平台>_bin/test 1    # color_print 专项
+out/<平台>_bin/test 2    # 红黑树内核专项
+```
+
+任一用例失败时（人工判定用例不计入统计）测试进程以非 0 退出码结束。
 
 # 文档
 

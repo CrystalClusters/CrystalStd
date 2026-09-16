@@ -302,6 +302,8 @@ static CCINT32 passed = 0;
 static CCINT32 failed = 0;
 static CCUINT32 case_code = 1;
 
+CCINT32 test_rbt_failures(void) { return failed; }
+
 static void rbt_expect(CCBOOL cond, const char *name)
 {
     if (cond)

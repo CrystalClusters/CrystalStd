@@ -29,4 +29,11 @@ void test_color_print(void);
  */
 void test_rbt_core(void);
 
+/**
+ * 取各测试组的失败用例数，供 main 决定进程退出码
+ */
+CCINT32 test_basic_failures(void);
+CCINT32 test_color_print_failures(void);
+CCINT32 test_rbt_failures(void);
+
 #endif
