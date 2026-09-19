@@ -13,10 +13,12 @@ CC_RUN_BEFORE_MAIN void _init_crystal_std_()
 {
     init_console();
     color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT) "开启水晶簇标准库\n");
+    init_ccalloc();
 }
 
 CC_RUN_AFTER_MAIN void _deinit_crystal_std_()
 {
+    deinit_ccalloc();
     color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT) "关闭水晶簇标准库\n");
     deinit_console();
 }

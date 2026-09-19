@@ -20,4 +20,9 @@
 void init_console(void);
 void deinit_console(void);
 
+//
+// 初始化ccalloc的内部接口
+void init_ccalloc(void);
+void deinit_ccalloc(void);
+
 #endif
