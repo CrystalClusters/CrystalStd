@@ -17,7 +17,7 @@ void* alloc_segment(CCUINT64 size)
 #ifdef CC_WINDOWS
     p = VirtualAlloc(NULL, (SIZE_T)size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #else
-    p = mmap(NULL, (size_t)size, PORT_READ | PORT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    p = mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED)
         return NULL;
 #endif

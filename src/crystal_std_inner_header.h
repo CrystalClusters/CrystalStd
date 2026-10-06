@@ -17,6 +17,8 @@
 
 #ifdef CC_WINDOWS
 #include <memoryapi.h>
+#else
+#include <sys/mman.h>
 #endif
 
 //
