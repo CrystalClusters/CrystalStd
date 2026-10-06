@@ -2,7 +2,7 @@
  * @Author: Renascent Adore lizaterop@gmail.com
  * @Date: 2026-09
  * @LastEditors: Renascent Adore lizaterop@gmail.com
- * @LastEditTime: 2026-09
+ * @LastEditTime: 2026-10
  * @Description: 用于内部接口流通的头文件。
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
  */
@@ -13,6 +13,11 @@
 #include <crystal_cluster.h>
 #include <color_print.h>
 #include <cc_rbt.h>
+#include <ccalloc.h>
+
+#ifdef CC_WINDOWS
+#include <memoryapi.h>
+#endif
 
 //
 // 初始化color_print的内部接口
@@ -24,5 +29,12 @@ void deinit_console(void);
 // 初始化ccalloc的内部接口
 void init_ccalloc(void);
 void deinit_ccalloc(void);
+
+//
+// 工具函数
+//
+
+void* alloc_segment(CCUINT64 size);
+void free_segment(void *ptr, CCUINT64 size);
 
 #endif

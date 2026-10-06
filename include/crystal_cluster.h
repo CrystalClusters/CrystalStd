@@ -2,7 +2,7 @@
  * @Author: Renascent Adore lizaterop@gmail.com
  * @Date: 2026-09
  * @LastEditors: Renascent Adore lizaterop@gmail.com
- * @LastEditTime: 2026-09
+ * @LastEditTime: 2026-10
  * @Description: 水晶簇体系的第一个头文件，也作为通用基础定义头文件。
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
  */
@@ -48,6 +48,8 @@ typedef intptr_t CCINTPTR;
 
 #define CC_RUN_BEFORE_MAIN __attribute__((constructor))
 #define CC_RUN_AFTER_MAIN  __attribute__((destructor))
+
+#define CC_UNUSED(v) (void)(v)
 
 /**
  * 通用函数签名定义
