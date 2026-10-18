@@ -13,10 +13,35 @@
 #include "crystal_cluster.h"
 
 // 内存对齐粒度（字节）
-// 该对齐为最低要求。如果有容量较大的情况，导致无法按照最低粒度对齐，
-// 那就对对齐粒度做乘2处理，直到能够容纳
-// 例如 70 字节无法放入 64 字节对齐粒度，则对齐到 128 字节
+// 实际用户大小按该粒度向上取整；该值应不大于系统页大小。
+#ifndef CC_MEM_ALIGN_MIN
 #define CC_MEM_ALIGN_MIN 64
+#endif
+
+// 用户段默认大小（字节）
+#ifndef CC_MEM_USER_SEGMENT_SIZE
+#define CC_MEM_USER_SEGMENT_SIZE (((CCUINT64)1) << 20)
+#endif
+
+// Meta 段默认大小（字节）
+#ifndef CC_MEM_META_SEGMENT_SIZE
+#define CC_MEM_META_SEGMENT_SIZE (((CCUINT64)1) << 16)
+#endif
+
+// FreeList 段默认大小（字节）
+#ifndef CC_MEM_FREELIST_SEGMENT_SIZE
+#define CC_MEM_FREELIST_SEGMENT_SIZE (((CCUINT64)1) << 16)
+#endif
+
+// 拆分空闲区的最小剩余量（字节）
+#ifndef CC_MEM_MIN_SPLIT
+#define CC_MEM_MIN_SPLIT 32
+#endif
+
+// 是否自动回收 100% 空闲的用户段（1 = 开，0 = 关）
+#ifndef CC_MEM_TRIM_SEGMENTS
+#define CC_MEM_TRIM_SEGMENTS 1
+#endif
 
 /**
  * 内存分配器，详情见文档：

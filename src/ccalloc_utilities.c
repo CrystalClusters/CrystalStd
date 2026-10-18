@@ -35,3 +35,33 @@ void free_segment(void *ptr, CCUINT64 size)
     munmap(ptr, (size_t)size);
 #endif
 }
+
+// 将段置为不可访问
+CCBOOL protect_segment(void *ptr, CCUINT64 size)
+{
+    if (!ptr || !size) return CCFALSE;
+#ifdef CC_WINDOWS
+    DWORD old_protect = 0;
+    if (!VirtualProtect(ptr, (SIZE_T)size, PAGE_NOACCESS, &old_protect))
+        return CCFALSE;
+#else
+    if (mprotect(ptr, (size_t)size, PROT_NONE) != 0)
+        return CCFALSE;
+#endif
+    return CCTRUE;
+}
+
+// 将段置为可读写
+CCBOOL unprotect_segment(void *ptr, CCUINT64 size)
+{
+    if (!ptr || !size) return CCFALSE;
+#ifdef CC_WINDOWS
+    DWORD old_protect = 0;
+    if (!VirtualProtect(ptr, (SIZE_T)size, PAGE_READWRITE, &old_protect))
+        return CCFALSE;
+#else
+    if (mprotect(ptr, (size_t)size, PROT_READ | PROT_WRITE) != 0)
+        return CCFALSE;
+#endif
+    return CCTRUE;
+}

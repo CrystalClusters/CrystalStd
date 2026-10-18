@@ -24,11 +24,15 @@ static int _inner_direct_run_(CCINT32 index)
     case 2:
         test_rbt_core();
         break;
+    case 3:
+        test_ccalloc();
+        break;
     default:
         break;
     }
     // 任一组用例存在失败即返回非 0，便于脚本/CI 判断结果
-    CCINT32 failures = test_basic_failures() + test_color_print_failures() + test_rbt_failures();
+    CCINT32 failures = test_basic_failures() + test_color_print_failures() +
+                       test_rbt_failures() + test_ccalloc_failures();
     return failures ? 1 : 0;
 }
 
@@ -38,6 +42,7 @@ static void _inner_print_usage_(void)
     color_print("0：基础测试\n");
     color_print("1：color_print专项\n");
     color_print("2：红黑树内核专项\n");
+    color_print("3：ccalloc 专项\n");
     color_print("q：退出\n");
     color_print("输入选项并回车：");
 }

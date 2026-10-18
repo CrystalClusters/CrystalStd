@@ -30,7 +30,7 @@ void deinit_console(void);
 //
 // 初始化ccalloc的内部接口
 void init_ccalloc(void);
-void deinit_ccalloc(void);
+CCUINT32 deinit_ccalloc(void);
 
 //
 // 工具函数
@@ -38,5 +38,9 @@ void deinit_ccalloc(void);
 
 void* alloc_segment(CCUINT64 size);
 void free_segment(void *ptr, CCUINT64 size);
+
+// 页保护：成功返回 CCTRUE，失败返回 CCFALSE
+CCBOOL protect_segment(void *ptr, CCUINT64 size);
+CCBOOL unprotect_segment(void *ptr, CCUINT64 size);
 
 #endif
