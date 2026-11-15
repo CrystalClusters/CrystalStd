@@ -5,6 +5,7 @@
  */
 
 #include "test_harness.h"
+#include <color_print.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +43,8 @@ static CCUINT32 g_harness_errors = 0;
 static void harness_error(const char *text)
 {
     g_harness_errors++;
-    printf("[HARNESS][FAIL] %s\n", text ? text : "");
+    color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[HARNESS][FAIL] %s\n",
+                text ? text : "");
     fflush(stdout);
 }
 
@@ -79,8 +81,8 @@ void cc_test_begin(const char *build, const char *level, CCUINT32 seed)
     g_case_active = CCFALSE;
     g_harness_errors = 0;
 
-    printf("== CrystalStd test ==\n");
-    printf("build=%s level=%s seed=%u\n", g_build, g_level, (unsigned)g_seed);
+    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT) "== CrystalStd test ==\n");
+    color_print("build=%s level=%s seed=%u\n", g_build, g_level, g_seed);
 }
 
 void cc_test_suite_begin(const char *suite, const char *title)
@@ -94,7 +96,8 @@ void cc_test_suite_begin(const char *suite, const char *title)
     g_suite_manual = 0;
     g_suite_checks = 0;
 
-    printf("\n== %s (%s) ==\n", (title && *title) ? title : g_suite, g_suite);
+    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "\n== %s (%s) ==\n",
+                (title && *title) ? title : g_suite, g_suite);
     fflush(stdout);
 }
 
@@ -102,11 +105,12 @@ void cc_test_suite_end(void)
 {
     if (g_case_active) cc_test_case_end();
 
-    printf("[%s] total=%d passed=%d failed=%d skipped=%d manual=%d checks=%u\n",
-           g_suite,
-           g_suite_pass + g_suite_fail + g_suite_skip,
-           g_suite_pass, g_suite_fail, g_suite_skip, g_suite_manual,
-           g_suite_checks);
+    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
+                "[%s] total=%d passed=%d failed=%d skipped=%d manual=%d checks=%u\n",
+                g_suite,
+                g_suite_pass + g_suite_fail + g_suite_skip,
+                g_suite_pass, g_suite_fail, g_suite_skip, g_suite_manual,
+                g_suite_checks);
     fflush(stdout);
 }
 
@@ -152,7 +156,8 @@ void cc_test_check(CCBOOL condition, const char *label,
     g_case_failed++;
     char detail[CC_TEST_DETAIL_MAX];
     format_detail(detail, sizeof(detail), label, expected, actual);
-    printf("[%s][FAIL] %s\n", g_case_id, detail);
+    color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[%s][FAIL] %s\n",
+                g_case_id, detail);
     fflush(stdout);
 }
 
@@ -165,21 +170,24 @@ void cc_test_case_end(void)
     {
         g_suite_fail++;
         g_fail++;
-        printf("[%s][FAIL] %s (%d checks, %d failed)\n",
-               g_case_id, g_case_name, g_case_checks, g_case_failed);
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                    "[%s][FAIL] %s (%d checks, %d failed)\n",
+                    g_case_id, g_case_name, g_case_checks, g_case_failed);
     }
     else if (g_case_checks == 0)
     {
         g_suite_fail++;
         g_fail++;
-        printf("[%s][FAIL] %s (no checks)\n", g_case_id, g_case_name);
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                    "[%s][FAIL] %s (no checks)\n", g_case_id, g_case_name);
     }
     else
     {
         g_suite_pass++;
         g_pass++;
-        printf("[%s][PASS] %s (%d checks)\n",
-               g_case_id, g_case_name, g_case_checks);
+        color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
+                    "[%s][PASS] %s (%d checks)\n",
+                    g_case_id, g_case_name, g_case_checks);
     }
     fflush(stdout);
 }
@@ -195,10 +203,11 @@ void cc_test_case_skip(const char *reason)
     g_suite_skip++;
     g_skip++;
 
-    printf("[%s][SKIP] %s%s%s\n",
-           g_case_id, g_case_name,
-           (reason && *reason) ? ": " : "",
-           (reason && *reason) ? reason : "");
+    color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
+                "[%s][SKIP] %s%s%s\n",
+                g_case_id, g_case_name,
+                (reason && *reason) ? ": " : "",
+                (reason && *reason) ? reason : "");
     fflush(stdout);
 }
 
@@ -215,15 +224,27 @@ void cc_test_manual(const char *id, const char *title,
     (void)file;
     g_suite_manual++;
     g_manual++;
-    printf("[%s][MANUAL] %s\n", id, (title && *title) ? title : "");
+    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "[%s][MANUAL] %s\n",
+                id, (title && *title) ? title : "");
     fflush(stdout);
 }
 
 void cc_test_print_summary(void)
 {
-    printf("\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
-           g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
-           (unsigned)g_checks, (unsigned)g_harness_errors);
+    if (g_fail == 0 && g_harness_errors == 0)
+    {
+        color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
+                    "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
+                    g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
+                    g_checks, g_harness_errors);
+    }
+    else
+    {
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                    "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
+                    g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
+                    g_checks, g_harness_errors);
+    }
     fflush(stdout);
 }
 

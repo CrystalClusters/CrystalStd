@@ -925,43 +925,43 @@ CCINT32 ccfiles_mount(CCFiles *fs, const char *v_path, const char *real_path, CC
     if (type != CC_FS_MOUNT_DIR && type != CC_FS_MOUNT_PKG && type != CC_FS_MOUNT_FILE)
         return CC_FS_ERR_PARAM;
 
-    CCDyn resolved;
-    memset(&resolved, 0, sizeof(resolved));
+    CCDyn canon;
+    memset(&canon, 0, sizeof(canon));
     CCDyn leaf;
     memset(&leaf, 0, sizeof(leaf));
     CCINT32 ret = CC_FS_OK;
 
-    ret = fs_real_resolve(real_path, &resolved);
+    ret = fs_real_canon(real_path, &canon);
     if (ret != CC_FS_OK)
-        goto FailedtoResolve;
-    const char *rpath = fs_buf_str(&resolved);
+        goto FailedtoCanon;
+    const char *rpath = fs_buf_str(&canon);
     if (rpath[0] == '\0')
     {
         ret = CC_FS_ERR_PARAM;
-        goto FailedtoResolve;
+        goto FailedtoCanon;
     }
 
     if (type == CC_FS_MOUNT_DIR && !fs_is_dir_path(rpath))
     {
         ret = CC_FS_ERR_NOENT;
-        goto FailedtoResolve;
+        goto FailedtoCanon;
     }
     if (type == CC_FS_MOUNT_FILE && !fs_file_exists(rpath))
     {
         ret = CC_FS_ERR_NOENT;
-        goto FailedtoResolve;
+        goto FailedtoCanon;
     }
     if (type == CC_FS_MOUNT_PKG && !fs_file_exists(rpath))
     {
         ret = CC_FS_ERR_NOENT;
-        goto FailedtoResolve;
+        goto FailedtoCanon;
     }
 
     CCUINT32 parent = CC_FS_NIL;
     CCUINT32 idx = CC_FS_NIL;
     ret = fs_vwalk(fs, v_path, CCFALSE, &parent, &leaf, &idx);
     if (ret != CC_FS_OK)
-        goto FailedtoResolve;
+        goto FailedtoCanon;
 
     const char *lf = fs_buf_str(&leaf);
     CCFsType node_type = (type == CC_FS_MOUNT_FILE) ? CC_FS_TYPE_FILE : CC_FS_TYPE_DIR;
@@ -972,25 +972,25 @@ CCINT32 ccfiles_mount(CCFiles *fs, const char *v_path, const char *real_path, CC
         if (lf[0] == '\0' || parent == CC_FS_NIL)
         {
             ret = CC_FS_ERR_PARAM;
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
         if (fs_is_protected(parent))
         {
             ret = CC_FS_ERR_PROTECT;
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
 
         /* 新锚点：先成功构建整棵 stage，再挂入名称树；扫描失败不留半截节点 */
         CCUINT32 stage = fs_mount_stage_create(lf, node_type, rpath, type, origin, &ret);
         if (stage == CC_FS_NIL)
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         node_at(stage)->fs_parent = parent;
         if (fs_insert_child(parent, stage) != 0)
         {
             node_at(stage)->fs_parent = CC_FS_NIL;
             fs_delete_subtree(stage);
             ret = CC_FS_ERR_IO;
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
         idx = stage;
     }
@@ -999,13 +999,13 @@ CCINT32 ccfiles_mount(CCFiles *fs, const char *v_path, const char *real_path, CC
         if (fs_is_protected(idx) && fs_find_anchor(idx) != idx)
         {
             ret = CC_FS_ERR_PROTECT;
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
 
         /* 覆盖锚点：stage 中构建新投影，再把旧内存节点/显式锚点合并进来 */
         CCUINT32 stage = fs_mount_stage_create("", node_type, rpath, type, origin, &ret);
         if (stage == CC_FS_NIL)
-            goto FailedtoResolve;
+            goto FailedtoCanon;
 
         CCDyn watch;
         memset(&watch, 0, sizeof(watch));
@@ -1014,7 +1014,7 @@ CCINT32 ccfiles_mount(CCFiles *fs, const char *v_path, const char *real_path, CC
         {
             fs_delete_subtree(stage);
             ret = CC_FS_ERR_NOSPACE;
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
 
         ret = fs_merge_preserved_children(idx, stage, &watch);
@@ -1023,23 +1023,23 @@ CCINT32 ccfiles_mount(CCFiles *fs, const char *v_path, const char *real_path, CC
         if (ret != CC_FS_OK)
         {
             fs_delete_subtree(stage);
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
 
         ret = fs_mount_commit(idx, stage);
         if (ret != CC_FS_OK)
         {
             fs_delete_subtree(stage);
-            goto FailedtoResolve;
+            goto FailedtoCanon;
         }
     }
 
-    fs_buf_free(&resolved);
+    fs_buf_free(&canon);
     fs_buf_free(&leaf);
     return CC_FS_OK;
 
-FailedtoResolve:
-    fs_buf_free(&resolved);
+FailedtoCanon:
+    fs_buf_free(&canon);
     fs_buf_free(&leaf);
     return ret;
 }

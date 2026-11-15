@@ -47,6 +47,22 @@ static void _test_auto_(void)
     _expect_("invalid hex fallback", 5, color_print("%c_GG\n", 'x'));
     _expect_("incomplete color escape eof", 2, color_print("%c_", 'x'));
     _expect_("incomplete color escape newline", 3, color_print("%c_\n", 'x'));
+
+    CC_CASE("COLOR-AUTO-002", "宽度、对齐、64 位与大写十六进制");
+    _expect_("%08llX", 11, color_print("[%08llX]\n", (CCUINT64)0x1234ABCD));
+    _expect_("%02X", 5, color_print("[%02X]\n", (CCUINT32)0xAB));
+    _expect_("%08X", 11, color_print("[%08X]\n", (CCUINT32)0x1A2B));
+    _expect_("%-28s", 31, color_print("[%-28s]\n", "name"));
+    _expect_("%5s", 8, color_print("[%5s]\n", "ab"));
+    _expect_("%.3s", 6, color_print("[%.3s]\n", "abcdef"));
+    _expect_("%llu", 23, color_print("[%llu]\n", (CCUINT64)18446744073709551615ULL));
+    _expect_("%lld", 7, color_print("[%lld]\n", (CCINT64)-123));
+    _expect_("%5d", 8, color_print("[%5d]\n", 42));
+    _expect_("%-5d", 8, color_print("[%-5d]\n", 42));
+    _expect_("%#x", 7, color_print("[%#x]\n", (CCUINT32)255));
+    _expect_("%zu", 6, color_print("[%zu]\n", (size_t)123));
+    _expect_("%lf", 11, color_print("[%lf]\n", 1.5));
+    _expect_("%.2lf", 7, color_print("[%.2lf]\n", 3.14159));
 }
 
 void test_color_print(void)

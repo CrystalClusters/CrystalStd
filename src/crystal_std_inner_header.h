@@ -20,6 +20,7 @@
 #include <cc_crc.h>
 #include <cc_wildcard.h>
 #include <ccfiles.h>
+#include <ccnet.h>
 
 #ifdef CC_WINDOWS
 #include <windows.h>
@@ -53,6 +54,8 @@ void deinit_ccthread(void);
 // 初始化ccfiles的内部参数
 void init_ccfiles(void);
 void deinit_ccfiles(void);
+void init_ccnet(void);
+void deinit_ccnet(void);
 
 //
 // 总构造、析构函数

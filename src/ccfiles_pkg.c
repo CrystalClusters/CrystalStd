@@ -780,9 +780,9 @@ CCINT32 ccfiles_pack(CCFiles *fs, const char *v_path, const char *real_path)
         goto FailedtoWalk;
     }
 
-    ret = fs_real_resolve(real_path, &out);
+    ret = fs_real_canon(real_path, &out);
     if (ret != CC_FS_OK)
-        goto FailedtoResolve;
+        goto FailedtoCanon;
     const char *outp = fs_buf_str(&out);
     if (fs_file_exists(outp))
     {
@@ -947,7 +947,7 @@ FailedtoMakeTemp:
 FailedtoCollect:
     fs_pkg_entries_free(&entries);
 FailedtoCheckTarget:
-FailedtoResolve:
+FailedtoCanon:
     fs_buf_free(&out);
 FailedtoWalk:
     if (idx != CC_FS_NIL)
@@ -998,11 +998,11 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path)
 
     ret = fs_physical(idx, &src);
     if (ret != CC_FS_OK)
-        goto FailedtoResolveSource;
+        goto FailedtoCanonSource;
 
-    ret = fs_real_resolve(real_path, &target);
+    ret = fs_real_canon(real_path, &target);
     if (ret != CC_FS_OK)
-        goto FailedtoResolveTarget;
+        goto FailedtoCanonTarget;
     const char *tgt = fs_buf_str(&target);
     if (fs_file_exists(tgt))
     {
@@ -1140,9 +1140,9 @@ FailedtoReadHeader:
         fclose(fp);
 FailedtoOpenPackage:
 FailedtoCheckTarget:
-FailedtoResolveTarget:
+FailedtoCanonTarget:
     fs_buf_free(&target);
-FailedtoResolveSource:
+FailedtoCanonSource:
     fs_buf_free(&src);
 FailedtoFlush:
 FailedtoWalk:

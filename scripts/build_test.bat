@@ -26,7 +26,7 @@ if not exist "tests\test.c" (
 set SRCS=
 for /r tests %%s in (*.c) do set "SRCS=!SRCS! %%s"
 
-gcc !SRCS! -o "%BIN_DIR%\test.exe" -Iinclude %CC_BUILD_CFLAGS% -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive
+gcc !SRCS! -o "%BIN_DIR%\test.exe" -Iinclude -Isrc %CC_BUILD_CFLAGS% -Wl,--whole-archive "%LIB%" -Wl,--no-whole-archive -lws2_32 -liphlpapi
 if errorlevel 1 (
     echo [¥ÌŒÛ] ±‡“Î≤‚ ‘≥Ã–Ú ß∞‹°£
     exit /b 1

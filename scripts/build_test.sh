@@ -28,6 +28,6 @@ fi
 # 收集源码
 SRC=$(find ./tests -name '*.c')
 
-gcc ${SRC} -o ${BIN_DIR}/test -Iinclude ${CC_BUILD_CFLAGS} \
-    -Wl,--whole-archive "${LIB}" -Wl,--no-whole-archive
+gcc ${SRC} -o ${BIN_DIR}/test -Iinclude -Isrc ${CC_BUILD_CFLAGS} \
+    -Wl,--whole-archive "${LIB}" -Wl,--no-whole-archive -pthread
 echo "已生成测试程序：${BIN_DIR}/test"

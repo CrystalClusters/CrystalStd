@@ -27,8 +27,6 @@ CCINT32 cc_rbt_core_inorder_tranverse(CC_RbtOps *ops, void *root, void *user, CC
 
 **返回值：**
 
-范式：`0` 表示成功，`-1` 表示参数非法（如 `dyn`/`data` 为空、`align` 为 0、`size` 为负），`1` 表示业务失败。
-
 - **cc_rbt_core_insert：**
 `0`插入成功；`1`键值重复（树未发生变动）；`-1`参数非法（`ops`或`node`为空）。
 - **cc_rbt_core_remove：**

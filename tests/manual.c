@@ -14,7 +14,7 @@
 static void manual_pause(const char *prompt)
 {
     int c;
-    printf("\n%s", prompt);
+    color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT) "\n%s", prompt);
     fflush(stdout);
     while ((c = getchar()) != '\n' && c != EOF)
     {
@@ -23,7 +23,7 @@ static void manual_pause(const char *prompt)
 
 void test_manual(void)
 {
-    printf("\n== 人工确认项 ==\n");
+    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "\n== 人工确认项 ==\n");
 
     CC_MANUAL("COLOR-MANUAL-001",
               "16x16色块矩阵（前景x背景）：核对每个格子的颜色组合");

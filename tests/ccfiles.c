@@ -304,8 +304,8 @@ void test_ccfiles(void)
     char tmp[1024];
     fs_test_tmpdir(tmp, sizeof(tmp));
 
-    char sub[1024];
-    char pkg[1024];
+    char sub[1100];
+    char pkg[1100];
     char p[1200];
     snprintf(sub, sizeof(sub), "%s/sub", tmp);
     snprintf(pkg, sizeof(pkg), "%s/pkg.pkg", tmp);
@@ -451,7 +451,7 @@ void test_ccfiles(void)
         "资源包头/块表/数据与内部格式一致");
 
     /* 解包：为包文件建虚拟节点（物理路径即该包），再解到磁盘目录 */
-    char unpack_dir[1024];
+    char unpack_dir[1100];
     snprintf(unpack_dir, sizeof(unpack_dir), "%s/unpacked", tmp);
     snprintf(p, sizeof(p), "%s/c.txt", unpack_dir); remove(p);
     fs_test_rmdir(unpack_dir);

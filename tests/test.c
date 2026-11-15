@@ -52,6 +52,7 @@ static const test_suite g_suites[] = {
     { "ALLOC", "ccalloc 专项", test_ccalloc },
     { "THREAD", "异步组件专项", test_thread },
     { "FS", "统一文件管理专项", test_ccfiles },
+    { "NET", "ccnet", test_ccnet },
 };
 
 #define SUITE_COUNT ((CCUINT32)(sizeof(g_suites) / sizeof(g_suites[0])))
@@ -118,26 +119,27 @@ static void inner_init_project(void)
 
 static void inner_print_usage(void)
 {
-    printf("用法: test [all|manual|<套件名>] [选项]\n");
-    printf("套件名: ");
+    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
+                "用法: test [all|manual|<套件名>] [选项]\n");
+    color_print("套件名: ");
     for (CCUINT32 i = 0; i < SUITE_COUNT; i++)
-        printf("%s%s", i ? "|" : "", g_suites[i].name);
-    printf("\n");
-    printf("  --level quick|full\n");
-    printf("  --seed <uint32>\n");
-    printf("  --help\n");
-    printf("无参数时进入交互菜单。\n");
+        color_print("%s%s", i ? "|" : "", g_suites[i].name);
+    color_print("\n");
+    color_print("  --level quick|full\n");
+    color_print("  --seed <uint32>\n");
+    color_print("  --help\n");
+    color_print("无参数时进入交互菜单。\n");
 }
 
 static void inner_print_menu(void)
 {
-    printf("\n请选择测试项：\n");
+    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "\n请选择测试项：\n");
     for (CCUINT32 i = 0; i < SUITE_COUNT; i++)
-        printf("%u：%s\n", i + 1, g_suites[i].title);
-    printf("a：全部自动测试\n");
-    printf("m：人工确认项\n");
-    printf("q：退出\n");
-    printf("输入选项并回车：");
+        color_print("  %u：%s\n", i + 1, g_suites[i].title);
+    color_print("  a：全部自动测试\n");
+    color_print("  m：人工确认项\n");
+    color_print("  q：退出\n");
+    color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT) "输入选项并回车：");
     fflush(stdout);
 }
 
@@ -201,10 +203,12 @@ static int inner_run_manual(CCBOOL required)
     {
         if (required)
         {
-            printf("[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
+            color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                        "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
             return 2;
         }
-        printf("[提示] 当前不是交互终端，人工确认项已跳过。\n");
+        color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
+                    "[提示] 当前不是交互终端，人工确认项已跳过。\n");
         return 0;
     }
 
@@ -215,7 +219,7 @@ static int inner_run_manual(CCBOOL required)
 static int inner_run_all_with_manual(void)
 {
     int failed = inner_run_all();
-    printf("\n");
+    color_print("\n");
     if (inner_run_manual(CCFALSE) == 2)
         failed = 1;
     return failed;
@@ -231,7 +235,7 @@ static int inner_menu(void)
         inner_print_menu();
         if (!inner_read_choice(choice, sizeof(choice)))
         {
-            printf("\n输入已结束，退出。\n");
+            color_print(CC_TEXT_COLOR(CC_GRAY, CC_DEFAULT) "\n输入已结束，退出。\n");
             break;
         }
 
@@ -262,7 +266,7 @@ static int inner_menu(void)
             continue;
         }
 
-        printf("[错误] 未知选项: %s\n", choice);
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] 未知选项: %s\n", choice);
     }
 
     return any_fail ? 1 : 0;
@@ -289,13 +293,13 @@ int main(int argc, char **argv)
         }
         else if (argv[i][0] == '-')
         {
-            printf("[错误] 未知选项: %s\n", argv[i]);
+            color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] 未知选项: %s\n", argv[i]);
             inner_print_usage();
             return 2;
         }
         else if (suite)
         {
-            printf("[错误] 多余的套件参数: %s\n", argv[i]);
+            color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] 多余的套件参数: %s\n", argv[i]);
             inner_print_usage();
             return 2;
         }
@@ -307,7 +311,7 @@ int main(int argc, char **argv)
 
     if (strcmp(level, "quick") && strcmp(level, "full"))
     {
-        printf("[错误] --level 只能是 quick 或 full\n");
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] --level 只能是 quick 或 full\n");
         return 2;
     }
 
@@ -329,14 +333,15 @@ int main(int argc, char **argv)
     int index = inner_find_suite(suite);
     if (index < 0)
     {
-        printf("[错误] 未知套件: %s\n", suite);
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] 未知套件: %s\n", suite);
         inner_print_usage();
         return 2;
     }
 
     if (index == 101 && !inner_console_is_tty())
     {
-        printf("[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
+        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                    "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
         return 2;
     }
 

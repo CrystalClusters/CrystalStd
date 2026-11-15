@@ -16,6 +16,7 @@
 #include <color_print.h>
 #include <cctime.h>
 #include <ccfiles.h>
+#include <ccnet.h>
 
 #include "test_harness.h"
 
@@ -27,6 +28,7 @@ void test_dyn_core(void);
 void test_ccalloc(void);
 void test_thread(void);
 void test_ccfiles(void);
+void test_ccnet(void);
 
 /* 人工确认项：只在交互终端中、全部自动套件之后运行。 */
 void test_manual(void);

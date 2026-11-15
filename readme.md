@@ -1,8 +1,10 @@
 # CrystalStd-水晶簇标准库
 
-> v0.9.0-beta · [版本发行说明](CHANGELOG.md)
+> v1.0.0-beta · [版本发行说明](CHANGELOG.md)
 
 该标准库是专为水晶簇件体系设计的二进制标准解决方案，纯C编写。用于替代 crystal clusters 体系内对C标准库的直接引用，增强开发可控性和一致性。此解决方案跨平台，支持amd64、arm64等指令集，Linux、Windows、Android等平台。
+
+快速上手与各模块组的典型用法见 [快速入门](docs/快速入门.md)。
 
 # 定位
 
@@ -71,9 +73,11 @@ for /r src %%s in (*.c) do ...
 out/
 ├── obj/                  中间目标文件（.o）
 └── <平台>_bin/           按平台架构命名的产物目录
-    ├── libCrystalStd.a     静态库
-    ├── test(.exe)          测试程序
-    └── ccfiles_demo(.exe)  虚拟文件系统交互演示
+    ├── libCrystalStd.a           静态库
+    ├── test(.exe)                测试程序
+    ├── ccfiles_demo(.exe)        虚拟文件系统交互演示
+    ├── ccnet_server_demo(.exe)   网络演示服务端
+    └── ccnet_client_demo(.exe)   网络演示客户端
 ```
 
 # 测试
@@ -113,14 +117,29 @@ out/
 
 # 演示
 
-`ccfiles` 提供类 shell 的交互演示程序，启动后界面保持简洁，输入 `-h` 查看命令帮助，`quit` 退出：
+演示按 `demo/<group>/main.c` 或 `demo/<group>/<target>/main.c` 分目录存放，构建脚本自动检索，不需要维护源文件清单；空目录不会被识别为演示。同组共享代码放在 `demo/<group>/common/`，磁盘上只有一份，构建时分别编入同组多个目标。
+
+直接运行不带参数的 `run_demo.*` 会列出全部产物并进入选择菜单：输入序号运行对应演示，直接回车、输入 `0` 或 `q` 可不运行直接退出。带参数时直接运行目标，`--list` 只列出产物：
 
 ```bash
-./run_demo.sh        # Linux
-.\run_demo.bat       # Windows
-# 或直接运行
-out/<平台>_bin/ccfiles_demo
+./run_demo.sh                    # 菜单
+./run_demo.sh --list             # 只列出
+./run_demo.sh ccfiles
+./run_demo.sh ccnet_server
+./run_demo.sh ccnet_client
 ```
+
+```bat
+run_demo.bat                     :: 菜单
+run_demo.bat --list              :: 只列出
+run_demo.bat ccfiles
+run_demo.bat ccnet_server
+run_demo.bat ccnet_client
+```
+
+`ccnet` 演示需要一个服务端窗口和至少一个客户端窗口。服务端用 `listen <port>` 开启监听，客户端用 `connect <host> <port>` 连接；完整命令、消息来源与环形缓冲区语义见 [网络演示文档](docs/ccnet_demo.md)。
+
+`ccfiles` 演示启动后界面保持简洁，输入 `-h` 查看命令帮助，`quit` 退出。
 
 支持通过十六进制字节流写入任意二进制内容，写入直通物理文件（`flush` 可强制立刻可见）：
 

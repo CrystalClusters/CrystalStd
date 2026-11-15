@@ -2,7 +2,7 @@
  * @Author: Renascent Adore lizaterop@gmail.com
  * @Date: 2026-08
  * @LastEditors: Renascent Adore lizaterop@gmail.com
- * @LastEditTime: 2026-09
+ * @LastEditTime: 2026-11
  * @Description: 
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
@@ -191,16 +191,16 @@ static inline CCUINT32 hex2int(char c)
  */
 static void write_ansi_color(CCUINT32 fg, CCUINT32 bg)
 {
+    CCUINT32 bg_len;
+
     if (fg>=16 || bg>=16)
         return;
 
     fwrite("\033[", 2, 1, stdout);
     fwrite(fg_ansi[fg], 2, 1, stdout); /* FG 始终 2 字符，0→"39" */
     fwrite(";", 1, 1, stdout);
-    {
-        CCUINT32 bg_len = (bg >= 8) ? 3 : 2; /* "49"/"41"=2 / "100"=3 */
-        fwrite(bg_ansi[bg], bg_len, 1, stdout);
-    }
+    bg_len = (bg >= 8) ? 3 : 2; /* "49"/"41"=2 / "100"=3 */
+    fwrite(bg_ansi[bg], bg_len, 1, stdout);
     fwrite("m", 1, 1, stdout);
 }
 
@@ -274,7 +274,7 @@ static void reset_color(char *out_buffer, CCUINT32 *p_buffer_counter, CCUINT32 *
 /**
  * 带颜色的换行：flush 缓冲 → 重置颜色 → 输出'\n' → 重新应用当前颜色。
  * 换行符是可见字符，计入返回值计数器；ANSI 转义码不计入。
- * 供 color_print 主循环与 fmt_string 复用，防止背景色填充行尾空白。
+ * 供 color_print 主循环与 fmt_string_spec 复用，防止背景色填充行尾空白。
  */
 static inline void newline_recolor(
     CCUINT32 cur_fg,
@@ -304,47 +304,6 @@ static inline void newline_recolor(
     }
     // 换行符是可见字符，计入返回值（不含 ANSI 转义码）
     (*p_counter)++;
-}
-
-/**
- * 返回值为模板字符串需要跳过的字节数
- */
-static inline CCUINT32 fmt_string(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter,
-    CCUINT32 cur_fg,
-    CCUINT32 cur_bg
-)
-{
-    char *s = (char*)va_arg(*p_args, char*);
-    if (!s) // 空指针检测
-        buffer_append_chars("(null)", 6, out_buffer, p_buffer_counter, p_counter);
-    else
-    {
-        while (*s != '\0')
-        {
-            // 有颜色状态下的换行：复用换行去色逻辑（防背景色填充行尾）+ 计数
-            if (*s == '\n' && (cur_fg != 0 || cur_bg != 0))
-            {
-                newline_recolor(cur_fg, cur_bg, out_buffer, p_buffer_counter, p_counter);
-            }
-            else
-            {
-                // 缓冲写满检测
-                if (*p_buffer_counter >= MAX_OUT_BUFFER)
-                {
-                    fwrite(out_buffer, *p_buffer_counter, 1, stdout);
-                    *p_counter += *p_buffer_counter;
-                    *p_buffer_counter = 0;
-                }
-                out_buffer[(*p_buffer_counter)++] = *s;
-            }
-            s++;
-        }
-    }
-    return 2;
 }
 
 /**
@@ -481,102 +440,6 @@ static inline void append_hex(
     }
 }
 
-static inline CCUINT32 fmt_decimal(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCINT32 d = va_arg(*p_args, CCINT32);
-    if (d < 0)
-    {
-        buffer_append_chars("-", 1, out_buffer, p_buffer_counter, p_counter);
-        append_decimal((CCUINT64)(-(CCUINT32)d), out_buffer, p_buffer_counter, p_counter);
-    }
-    else
-        append_decimal((CCUINT64)d, out_buffer, p_buffer_counter, p_counter);
-    return 2;
-}
-
-/*
- * %ld：CCINT64 有符号十进制。
- * 复用 append_decimal 输出绝对值，避免 INT64_MIN 溢出。
- */
-static inline void fmt_long_decimal(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCINT64 ld = va_arg(*p_args, CCINT64);
-    if (ld < 0)
-    {
-        buffer_append_chars("-", 1, out_buffer, p_buffer_counter, p_counter);
-        append_decimal((CCUINT64)(-(CCUINT64)ld), out_buffer, p_buffer_counter, p_counter);
-    }
-    else
-        append_decimal((CCUINT64)ld, out_buffer, p_buffer_counter, p_counter);
-}
-
-static inline CCUINT32 fmt_unsigned_decimal(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCUINT32 d = va_arg(*p_args, CCUINT32);
-    append_decimal((CCUINT64)d, out_buffer, p_buffer_counter, p_counter);
-    return 2;
-}
-
-/*
- * %lu：CCINT64 无符号十进制。
- * 复用 append_decimal。
- */
-static inline void fmt_long_unsigned_decimal(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCUINT64 lu = va_arg(*p_args, CCUINT64);
-    append_decimal((CCUINT64)lu, out_buffer, p_buffer_counter, p_counter);
-}
-
-static inline CCUINT32 fmt_hex(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCUINT32 x = va_arg(*p_args, CCUINT32);
-    // 0x 前缀
-    buffer_append_chars("0x", 2, out_buffer, p_buffer_counter, p_counter);
-    // 32 位变量输出固定长度的 8 位十六进制字符串（小写）
-    append_hex((CCUINT64)x, 8, out_buffer, p_buffer_counter, p_counter);
-    return 2;
-}
-
-static inline CCUINT32 fmt_long_hex(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
-{
-    CCUINT64 x = va_arg(*p_args, CCUINT64);
-    // 0x 前缀
-    buffer_append_chars("0x", 2, out_buffer, p_buffer_counter, p_counter);
-    // 64 位变量输出固定长度的 16 位十六进制字符串（小写）
-    append_hex(x, 16, out_buffer, p_buffer_counter, p_counter);
-    return 2;
-}
-
 // 编译期确定指针位宽对应的十六进制位数：32位=8，64位=16，以此类推
 #define PTR_HEX_DIGITS ((CCINT32)(sizeof(CCUINTPTR) * 2))
 static inline CCUINT32 fmt_pointer(
@@ -631,7 +494,7 @@ static inline void append_double_fraction(
 
     // 整数部分
     append_decimal(int_part, out_buffer, p_buffer_counter, p_counter);
-    // 精度为 0 时省略小数点（与 printf %.0f 行为一致）
+    // 精度为 0 时省略小数点（与标准格式化 %.0f 行为一致）
     if (precision > 0)
     {
         // 小数点
@@ -834,123 +697,405 @@ static inline void fmt_float_core(
     append_double_fraction((double)value, precision, out_buffer, p_buffer_counter, p_counter);
 }
 
-/* %f：默认 6 位小数 */
-static inline CCUINT32 fmt_float(
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
+/*
+ * 标准格式说明符子集：%[flags][width][.precision][length]conv
+ * 支持 -、0、+、空格、# 标志，十进制宽度与精度，长度 l / ll / z / j / t，
+ * 转换 d i u o x X c s p f F %。
+ * 颜色控制 %c_XY 在进入本解析前单独处理。
+ */
+typedef struct cc_fmt_spec
 {
-    // float 实参经变参默认提升为 double，故以 double 取出后截断回 float（32 位）
-    float value = (float)va_arg(*p_args, double);
-    fmt_float_core(value, 6, out_buffer, p_buffer_counter, p_counter);
-    return 2;
+    CCBOOL left;
+    CCBOOL zero;
+    CCBOOL plus;
+    CCBOOL space;
+    CCBOOL alt;
+    CCUINT32 width;
+    CCBOOL has_precision;
+    CCUINT32 precision;
+    CCUINT32 length; /* 0=int, 1=l, 2=ll/j/t, 3=z */
+    char conv;
+    CCUINT32 consumed;
+} CCFmtSpec;
+
+static CCBOOL fmt_parse_spec(const char *p, CCFmtSpec *s)
+{
+    CCUINT32 i = 1;
+    char c;
+
+    memset(s, 0, sizeof(*s));
+
+    /* flags */
+    for (;;)
+    {
+        c = p[i];
+        if (c == '-') s->left = CCTRUE;
+        else if (c == '0') s->zero = CCTRUE;
+        else if (c == '+') s->plus = CCTRUE;
+        else if (c == ' ') s->space = CCTRUE;
+        else if (c == '#') s->alt = CCTRUE;
+        else break;
+        i++;
+    }
+
+    /* width */
+    while (p[i] >= '0' && p[i] <= '9')
+    {
+        s->width = s->width * 10u + (CCUINT32)(p[i] - '0');
+        if (s->width > 4096u)
+            return CCFALSE;
+        i++;
+    }
+
+    /* precision */
+    if (p[i] == '.')
+    {
+        s->has_precision = CCTRUE;
+        i++;
+        while (p[i] >= '0' && p[i] <= '9')
+        {
+            s->precision = s->precision * 10u + (CCUINT32)(p[i] - '0');
+            if (s->precision > 4096u)
+                return CCFALSE;
+            i++;
+        }
+    }
+
+    /* length */
+    if (p[i] == 'h')
+    {
+        i++;
+        if (p[i] == 'h') i++;
+        s->length = 0;
+    }
+    else if (p[i] == 'l')
+    {
+        i++;
+        if (p[i] == 'l')
+        {
+            i++;
+            s->length = 2;
+        }
+        else
+        {
+            s->length = 1;
+        }
+    }
+    else if (p[i] == 'z')
+    {
+        i++;
+        s->length = 3;
+    }
+    else if (p[i] == 'j' || p[i] == 't')
+    {
+        i++;
+        s->length = 2;
+    }
+
+    c = p[i];
+    if (c == '\0')
+        return CCFALSE;
+    if (!(c == 'd' || c == 'i' || c == 'u' || c == 'o' || c == 'x' ||
+          c == 'X' || c == 'c' || c == 's' || c == 'p' || c == 'f' ||
+          c == 'F' || c == '%'))
+        return CCFALSE;
+    s->conv = c;
+    s->consumed = i + 1u;
+    return CCTRUE;
 }
 
-/*
- * %lf：double 浮点数（默认 6 位小数）。
- * 复用 fmt_double_core 全精度 double 路径，不做 float 截断。
- */
-static inline void fmt_long_float(
-    va_list *p_args,
+/* 输出 n 个相同字符（用于宽度填充） */
+static void fmt_out_repeat(
+    char c,
+    CCUINT32 n,
     char *out_buffer,
     CCUINT32 *p_buffer_counter,
     CCUINT32 *p_counter
 )
 {
-    double value = va_arg(*p_args, double);
-    fmt_double_core(value, 6, out_buffer, p_buffer_counter, p_counter);
+    char block[32];
+    CCUINT32 i;
+    for (i = 0; i < sizeof(block); i++)
+        block[i] = c;
+    while (n > 0)
+    {
+        CCUINT32 k = (n > sizeof(block)) ? (CCUINT32)sizeof(block) : n;
+        buffer_append_chars(block, k, out_buffer, p_buffer_counter, p_counter);
+        n -= k;
+    }
 }
 
-/*
- * %.Nf / %.Nlf：解析精度。digits 指向 "." 之后第一个字符。
- * 返回模板需跳过的字节数；格式非法时返回 0，由调用方回退为普通字符。
- */
-static inline CCUINT32 fmt_float_precision(
-    const char *digits,
-    va_list *p_args,
-    char *out_buffer,
-    CCUINT32 *p_buffer_counter,
-    CCUINT32 *p_counter
-)
+/* CCUINT64 -> 十进制字符串，返回长度 */
+static CCUINT32 u64_to_dec_str(CCUINT64 value, char *out)
 {
-    CCUINT32 precision = 0;
+    char tmp[21];
     CCUINT32 n = 0;
-    // 解析十进制精度数字
-    while (digits[n] >= '0' && digits[n] <= '9')
+    CCUINT32 i;
+    if (value == 0)
+        tmp[n++] = '0';
+    else
     {
-        precision = precision * 10 + (CCUINT32)(digits[n] - '0');
-        n++;
-        if (precision > 15)
-            precision = 15; // 防溢出（double 有效数字约 15 位）
+        while (value > 0)
+        {
+            tmp[n++] = (char)('0' + (value % 10u));
+            value /= 10u;
+        }
     }
-    // 结尾须为 'f'（或 'l'+'f'）才视为合法的 %.Nf / %.Nlf
-    CCBOOL is_long = CCFALSE;
-    if (digits[n] == 'l')
-    {
-        is_long = CCTRUE;
-        n++;
-    }
-    if (digits[n] != 'f')
-        return 0;
+    for (i = 0; i < n; i++)
+        out[i] = tmp[n - 1u - i];
+    return n;
+}
 
-    if (is_long)
+/* CCUINT64 -> 2/8/16 进制字符串，返回长度 */
+static CCUINT32 u64_to_base_str(CCUINT64 value, CCUINT32 base, CCBOOL upper, char *out)
+{
+    const char *digits = upper ? "0123456789ABCDEF" : "0123456789abcdef";
+    char tmp[65];
+    CCUINT32 n = 0;
+    CCUINT32 i;
+    if (value == 0)
+        tmp[n++] = '0';
+    else
     {
-        // %.Nlf：double 全精度路径（不截断为 float）
-        double value = va_arg(*p_args, double);
-        fmt_double_core(value, precision, out_buffer, p_buffer_counter, p_counter);
-        // 跳过 '%' + '.' + n 位数字(含 'l') + 'f'
-        return n + 3;
+        while (value > 0)
+        {
+            tmp[n++] = digits[value % base];
+            value /= base;
+        }
+    }
+    for (i = 0; i < n; i++)
+        out[i] = tmp[n - 1u - i];
+    return n;
+}
+
+/* 有符号 / 无符号整数，带宽度、对齐、符号、0 填充、精度与进制前缀 */
+static void fmt_int_spec(
+    CCFmtSpec *s,
+    va_list *p_args,
+    char *out_buffer,
+    CCUINT32 *p_buffer_counter,
+    CCUINT32 *p_counter
+)
+{
+    CCBOOL neg = CCFALSE;
+    CCBOOL is_signed = (s->conv == 'd' || s->conv == 'i') ? CCTRUE : CCFALSE;
+    CCUINT64 value = 0;
+    char digits[72];
+    char sign[4];
+    char prefix[4];
+    CCUINT32 dn;
+    CCUINT32 sn = 0;
+    CCUINT32 pn = 0;
+    CCUINT32 prec_zeros = 0;
+    CCUINT32 total;
+    CCUINT32 pad;
+    CCUINT32 i;
+
+    if (is_signed)
+    {
+        switch (s->length)
+        {
+        case 0:
+        {
+            int v = va_arg(*p_args, int);
+            if (v < 0)
+            {
+                neg = CCTRUE;
+                value = (CCUINT64)(-(CCINT64)v);
+            }
+            else
+            {
+                value = (CCUINT64)(CCUINT32)v;
+            }
+            break;
+        }
+        case 1:
+        case 2:
+        {
+            CCINT64 v = va_arg(*p_args, CCINT64);
+            if (v < 0)
+            {
+                neg = CCTRUE;
+                value = (CCUINT64)(-(CCUINT64)v);
+            }
+            else
+            {
+                value = (CCUINT64)v;
+            }
+            break;
+        }
+        default:
+        {
+            size_t v = va_arg(*p_args, size_t);
+            value = (CCUINT64)v;
+            break;
+        }
+        }
     }
     else
     {
-        // %.Nf：float 实参经变参默认提升为 double，以 double 取出后截断回 float（32 位）
-        float value = (float)va_arg(*p_args, double);
-        fmt_float_core(value, precision, out_buffer, p_buffer_counter, p_counter);
-        // 跳过 '%' + '.' + n 位数字 + 'f'
-        return n + 3;
+        switch (s->length)
+        {
+        case 0:
+            value = (CCUINT64)(CCUINT32)va_arg(*p_args, unsigned int);
+            break;
+        case 1:
+        case 2:
+            value = (CCUINT64)va_arg(*p_args, CCUINT64);
+            break;
+        default:
+            value = (CCUINT64)va_arg(*p_args, size_t);
+            break;
+        }
+    }
+
+    if (s->conv == 'o')
+    {
+        dn = u64_to_base_str(value, 8u, CCFALSE, digits);
+    }
+    else if (s->conv == 'x' || s->conv == 'X')
+    {
+        dn = u64_to_base_str(value, 16u, (s->conv == 'X') ? CCTRUE : CCFALSE, digits);
+    }
+    else
+    {
+        dn = u64_to_dec_str(value, digits);
+    }
+
+    /* 精度为 0 且值为 0：不输出数字（标准语义） */
+    if (s->has_precision && s->precision == 0 && value == 0)
+        dn = 0;
+    if (s->has_precision && dn < s->precision)
+        prec_zeros = s->precision - dn;
+
+    if (neg)
+        sign[sn++] = '-';
+    else if (is_signed && s->plus)
+        sign[sn++] = '+';
+    else if (is_signed && s->space)
+        sign[sn++] = ' ';
+
+    if (s->alt)
+    {
+        if ((s->conv == 'x' || s->conv == 'X') && value != 0)
+        {
+            prefix[pn++] = '0';
+            prefix[pn++] = s->conv;
+        }
+        else if (s->conv == 'o' && (dn == 0 || digits[0] != '0'))
+        {
+            prefix[pn++] = '0';
+        }
+    }
+
+    total = sn + pn + prec_zeros + dn;
+    pad = (s->width > total) ? (s->width - total) : 0;
+
+    if (s->left)
+    {
+        for (i = 0; i < sn; i++)
+            buffer_append_chars(sign + i, 1, out_buffer, p_buffer_counter, p_counter);
+        for (i = 0; i < pn; i++)
+            buffer_append_chars(prefix + i, 1, out_buffer, p_buffer_counter, p_counter);
+        fmt_out_repeat('0', prec_zeros, out_buffer, p_buffer_counter, p_counter);
+        buffer_append_chars(digits, dn, out_buffer, p_buffer_counter, p_counter);
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+    }
+    else if (s->zero && !s->has_precision)
+    {
+        for (i = 0; i < sn; i++)
+            buffer_append_chars(sign + i, 1, out_buffer, p_buffer_counter, p_counter);
+        for (i = 0; i < pn; i++)
+            buffer_append_chars(prefix + i, 1, out_buffer, p_buffer_counter, p_counter);
+        fmt_out_repeat('0', pad + prec_zeros, out_buffer, p_buffer_counter, p_counter);
+        buffer_append_chars(digits, dn, out_buffer, p_buffer_counter, p_counter);
+    }
+    else
+    {
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+        for (i = 0; i < sn; i++)
+            buffer_append_chars(sign + i, 1, out_buffer, p_buffer_counter, p_counter);
+        for (i = 0; i < pn; i++)
+            buffer_append_chars(prefix + i, 1, out_buffer, p_buffer_counter, p_counter);
+        fmt_out_repeat('0', prec_zeros, out_buffer, p_buffer_counter, p_counter);
+        buffer_append_chars(digits, dn, out_buffer, p_buffer_counter, p_counter);
     }
 }
 
-/**
- * 长变量，一般用于指定64位变量
- * fmt 指向 %l<此处>，"%l" 之后的第一个字符
- */
-static inline CCUINT32 fmt_long(
-    const char *fmt,
+/* 字符串，带宽度、左对齐与精度截断；颜色状态下换行会重置并重应用颜色 */
+static void fmt_string_spec(
+    CCFmtSpec *s,
+    va_list *p_args,
+    char *out_buffer,
+    CCUINT32 *p_buffer_counter,
+    CCUINT32 *p_counter,
+    CCUINT32 cur_fg,
+    CCUINT32 cur_bg
+)
+{
+    const char *str = va_arg(*p_args, const char *);
+    CCUINT32 n;
+    CCUINT32 pad;
+    CCUINT32 i;
+
+    if (!str)
+        str = "(null)";
+    n = (CCUINT32)strlen(str);
+    if (s->has_precision && n > s->precision)
+        n = s->precision;
+    pad = (s->width > n) ? (s->width - n) : 0;
+
+    if (!s->left)
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+    for (i = 0; i < n; i++)
+    {
+        char c = str[i];
+        if (c == '\n' && (cur_fg != 0 || cur_bg != 0))
+            newline_recolor(cur_fg, cur_bg, out_buffer, p_buffer_counter, p_counter);
+        else
+            buffer_append_chars(&c, 1, out_buffer, p_buffer_counter, p_counter);
+    }
+    if (s->left)
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+}
+
+/* 字符，带宽度与左对齐 */
+static void fmt_char_spec(
+    CCFmtSpec *s,
     va_list *p_args,
     char *out_buffer,
     CCUINT32 *p_buffer_counter,
     CCUINT32 *p_counter
 )
 {
-    switch (fmt[0])
+    char c = (char)va_arg(*p_args, int);
+    CCUINT32 pad = (s->width > 1) ? (s->width - 1) : 0;
+    if (!s->left)
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+    buffer_append_chars(&c, 1, out_buffer, p_buffer_counter, p_counter);
+    if (s->left)
+        fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
+}
+
+/* 浮点：沿用既有 float/double 内核；宽度暂不参与布局 */
+static void fmt_float_spec(
+    CCFmtSpec *s,
+    va_list *p_args,
+    char *out_buffer,
+    CCUINT32 *p_buffer_counter,
+    CCUINT32 *p_counter
+)
+{
+    CCUINT32 precision = s->has_precision ? s->precision : 6u;
+    if (s->length == 1)
     {
-    case 'd':  // CCINT64
-    {
-        fmt_long_decimal(p_args, out_buffer, p_buffer_counter, p_counter);
-        return 3;
+        double v = va_arg(*p_args, double);
+        fmt_double_core(v, precision, out_buffer, p_buffer_counter, p_counter);
     }
-    case 'u':  // CCUINT64
+    else
     {
-        fmt_long_unsigned_decimal(p_args, out_buffer, p_buffer_counter,p_counter);
-        return 3;
-    }
-    case 'x':  // CCUINT64 - hex
-    {
-        fmt_long_hex(p_args, out_buffer, p_buffer_counter, p_counter);
-        return 3;
-    }
-    case 'f':  // double
-    {
-        fmt_long_float(p_args, out_buffer, p_buffer_counter, p_counter);
-        return 3;
-    }
-    default:
-    {
-        return 0;
-    }
+        float v = (float)va_arg(*p_args, double);
+        fmt_float_core(v, precision, out_buffer, p_buffer_counter, p_counter);
     }
 }
 
@@ -965,74 +1110,72 @@ static inline CCBOOL try_match_control(
     CCUINT32 *p_cur_bg
 )
 {
-    // 在控制符匹配成功的情况下，步长至少为2
-    CCINTPTR step = 2;
-    switch ((*current)[1])
+    const char *p = *current;
+    CCFmtSpec spec;
+
+    /* 颜色控制：%c_XY；非法 hex 由 fmt_color 回退为普通 %c */
+    if (p[1] == 'c' && p[2] == '_')
+    {
+        CCUINT32 step = fmt_color(p + 3, p_args, out_buffer, p_buffer_counter, p_counter, p_color_modified, p_cur_fg, p_cur_bg);
+        *current += step;
+        return CCTRUE;
+    }
+
+    if (!fmt_parse_spec(p, &spec))
+        return CCFALSE;
+
+    /* 兼容旧语义：无标志/宽度/精度的 %x、%lx 仍输出 0x + 固定位宽 */
+    if (spec.conv == 'x' && !spec.alt && !spec.left && !spec.zero &&
+        spec.width == 0 && !spec.has_precision &&
+        (spec.length == 0 || spec.length == 1))
+    {
+        if (spec.length == 0)
+        {
+            CCUINT32 v = va_arg(*p_args, CCUINT32);
+            buffer_append_chars("0x", 2, out_buffer, p_buffer_counter, p_counter);
+            append_hex((CCUINT64)v, 8, out_buffer, p_buffer_counter, p_counter);
+        }
+        else
+        {
+            CCUINT64 v = va_arg(*p_args, CCUINT64);
+            buffer_append_chars("0x", 2, out_buffer, p_buffer_counter, p_counter);
+            append_hex(v, 16, out_buffer, p_buffer_counter, p_counter);
+        }
+        *current += spec.consumed;
+        return CCTRUE;
+    }
+
+    switch (spec.conv)
     {
     case '%':
-    {
         buffer_append_chars("%", 1, out_buffer, p_buffer_counter, p_counter);
         break;
-    }
     case 's':
-    {
-        step = fmt_string(p_args, out_buffer, p_buffer_counter, p_counter, *p_cur_fg, *p_cur_bg);
+        fmt_string_spec(&spec, p_args, out_buffer, p_buffer_counter, p_counter, *p_cur_fg, *p_cur_bg);
         break;
-    }
     case 'c':
-    {
-        if ((*current)[2] != '_')
-            step = fmt_char(p_args, out_buffer, p_buffer_counter, p_counter);
-        else
-            step = fmt_color((*current) + 3, p_args, out_buffer, p_buffer_counter, p_counter, p_color_modified, p_cur_fg, p_cur_bg);
+        fmt_char_spec(&spec, p_args, out_buffer, p_buffer_counter, p_counter);
         break;
-    }
     case 'd':
-    {
-        step = fmt_decimal(p_args, out_buffer, p_buffer_counter, p_counter);
-        break;
-    }
+    case 'i':
     case 'u':
-    {
-        step = fmt_unsigned_decimal(p_args, out_buffer, p_buffer_counter, p_counter);
-        break;
-    }
+    case 'o':
     case 'x':
-    {
-        step = fmt_hex(p_args, out_buffer, p_buffer_counter, p_counter);
+    case 'X':
+        fmt_int_spec(&spec, p_args, out_buffer, p_buffer_counter, p_counter);
         break;
-    }
     case 'p':
-    {
-        step = fmt_pointer(p_args, out_buffer, p_buffer_counter, p_counter);
+        (void)fmt_pointer(p_args, out_buffer, p_buffer_counter, p_counter);
         break;
-    }
     case 'f':
-    {
-        step = fmt_float(p_args, out_buffer, p_buffer_counter, p_counter);
+    case 'F':
+        fmt_float_spec(&spec, p_args, out_buffer, p_buffer_counter, p_counter);
         break;
-    }
-    case '.':
-    {
-        // %.Nf：解析精度控制小数位数
-        step = fmt_float_precision((*current) + 2, p_args, out_buffer, p_buffer_counter, p_counter);
-        if (step == 0)
-            return CCFALSE; // 非法格式：回退为普通字符输出
-        break;
-    }
-    case 'l':
-    {
-        step = fmt_long((*current) + 2, p_args, out_buffer, p_buffer_counter, p_counter);
-        if (step == 0)
-            return CCFALSE;
-        break;
-    }
     default:
-    {
         return CCFALSE;
     }
-    }
-    *current += step;
+
+    *current += spec.consumed;
     return CCTRUE;
 }
 

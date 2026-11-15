@@ -20,17 +20,20 @@ void cc_test_suite_begin(const char *suite, const char *title);
 void cc_test_suite_end(void);
 
 /* 用例边界：编号和名称由调用方显式给出。 */
-void cc_test_case_begin(const char *id, const char *name,
-                        const char *file, int line);
+void cc_test_case_begin(const char *id, const char *name, const char *file, int line);
 void cc_test_case_end(void);
 void cc_test_case_skip(const char *reason);
-void cc_test_manual(const char *id, const char *title,
-                    const char *file, int line);
+void cc_test_manual(const char *id, const char *title, const char *file, int line);
 
 /* 断言 */
-void cc_test_check(CCBOOL condition, const char *label,
-                   const char *expected, const char *actual,
-                   const char *file, int line);
+void cc_test_check(
+    CCBOOL condition,
+    const char *label,
+    const char *expected,
+    const char *actual,
+    const char *file,
+    int line
+);
 
 /* 统计 */
 CCINT32 cc_test_failures(void);
@@ -49,23 +52,27 @@ CCUINT32 cc_test_seed(void);
 
 #define CC_CHECK_EQ_I64(label, expected, actual) \
     do { \
+        CCINT64 cc_expected_value_ = (CCINT64)(expected); \
+        CCINT64 cc_actual_value_ = (CCINT64)(actual); \
         char cc_expected_[32]; \
         char cc_actual_[32]; \
-        snprintf(cc_expected_, sizeof(cc_expected_), "%lld", (long long)(expected)); \
-        snprintf(cc_actual_, sizeof(cc_actual_), "%lld", (long long)(actual)); \
-        cc_test_check((CCINT64)(expected) == (CCINT64)(actual), (label), \
+        snprintf(cc_expected_, sizeof(cc_expected_), "%lld", (long long)cc_expected_value_); \
+        snprintf(cc_actual_, sizeof(cc_actual_), "%lld", (long long)cc_actual_value_); \
+        cc_test_check(cc_expected_value_ == cc_actual_value_, (label), \
                       cc_expected_, cc_actual_, __FILE__, __LINE__); \
     } while (0)
 
 #define CC_CHECK_EQ_U64(label, expected, actual) \
     do { \
+        CCUINT64 cc_expected_value_ = (CCUINT64)(expected); \
+        CCUINT64 cc_actual_value_ = (CCUINT64)(actual); \
         char cc_expected_[32]; \
         char cc_actual_[32]; \
         snprintf(cc_expected_, sizeof(cc_expected_), "%llu", \
-                 (unsigned long long)(expected)); \
+                 (unsigned long long)cc_expected_value_); \
         snprintf(cc_actual_, sizeof(cc_actual_), "%llu", \
-                 (unsigned long long)(actual)); \
-        cc_test_check((CCUINT64)(expected) == (CCUINT64)(actual), (label), \
+                 (unsigned long long)cc_actual_value_); \
+        cc_test_check(cc_expected_value_ == cc_actual_value_, (label), \
                       cc_expected_, cc_actual_, __FILE__, __LINE__); \
     } while (0)
 

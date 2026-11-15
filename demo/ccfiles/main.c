@@ -10,6 +10,7 @@
  */
 
 #include <ccfiles.h>
+#include <color_print.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,15 @@
 #define DEMO_LINE_MAX  4096
 #define DEMO_IO_MAX    2048
 #define DEMO_HEX_MAX   8192
+
+/* 控制台配色：结果、错误、提示、标题、弱化信息 */
+#define C_OK     CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
+#define C_ERR    CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+#define C_WARN   CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
+#define C_INFO   CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
+#define C_TITLE  CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT)
+#define C_DIM    CC_TEXT_COLOR(CC_GRAY, CC_DEFAULT)
+#define C_RESET  CC_TEXT_COLOR(CC_DEFAULT, CC_DEFAULT)
 
 /* 演示状态：仅持有探针 */
 typedef struct demo_state {
@@ -121,19 +131,19 @@ static void print_hexdump(const unsigned char *buf, CCUINT32 len, CCUINT64 base)
     for (i = 0; i < len; i += 16)
     {
         CCUINT32 j;
-        printf("  %08llX  ", (unsigned long long)(base + i));
+        color_print(C_DIM "  %08llX  " C_RESET, (CCUINT64)(base + i));
         for (j = 0; j < 16; j++)
         {
-            if (i + j < len) printf("%02X ", buf[i + j]);
-            else printf("   ");
+            if (i + j < len) color_print("%02X ", buf[i + j]);
+            else color_print("   ");
         }
-        printf(" |");
+        color_print(" |");
         for (j = 0; j < 16 && i + j < len; j++)
         {
             unsigned char c = buf[i + j];
-            printf("%c", (c >= 32 && c < 127) ? (char)c : '.');
+            color_print("%c", (c >= 32 && c < 127) ? (char)c : '.');
         }
-        printf("|\n");
+        color_print("|\n");
     }
 }
 
@@ -168,11 +178,11 @@ static void print_result(const char *what, CCINT32 r)
 {
     if (r < 0)
     {
-        printf("[失败] %s: %s (%d)\n", what, fs_result_name(r), (int)r);
+        color_print(C_ERR "[失败] %s: %s (%d)\n", what, fs_result_name(r), (int)r);
     }
     else
     {
-        printf("[完成] %s\n", what);
+        color_print(C_OK "[完成] %s\n", what);
     }
 }
 
@@ -180,9 +190,9 @@ static CCINT32 cb_list(void *data, void *user)
 {
     const CCFsEntry *e = (const CCFsEntry*)data;
     if (e->type == CC_FS_TYPE_DIR)
-        printf("  %-28s <DIR>\n", e->name);
+        color_print(C_INFO "  %-28s <DIR>\n", e->name);
     else
-        printf("  %-28s %llu B\n", e->name, (unsigned long long)e->size);
+        color_print("  %-28s %llu B\n", e->name, (CCUINT64)e->size);
     (*(CCUINT32*)user)++;
     return 0;
 }
@@ -190,7 +200,7 @@ static CCINT32 cb_list(void *data, void *user)
 static CCINT32 cb_find(void *data, void *user)
 {
     const CCFsEntry *e = (const CCFsEntry*)data;
-    printf("  %s%s\n", e->name,
+    color_print(C_INFO "  %s%s\n", e->name,
         (e->type == CC_FS_TYPE_DIR) ? "/" : "");
     (*(CCUINT32*)user)++;
     return 0;
@@ -198,8 +208,8 @@ static CCINT32 cb_find(void *data, void *user)
 
 static void print_help(void)
 {
-    printf(
-"命令一览（<> 必填，[] 可选）：\n"
+    color_print(
+C_TITLE "命令一览（<> 必填，[] 可选）：\n" C_RESET
 "  导航/查询\n"
 "    pwd                         显示当前工作目录\n"
 "    cd <path>                   切换目录\n"
@@ -252,7 +262,7 @@ static void cmd_write(DemoState *st, const char **pp)
 
     if (!take_tok(&p, t1, sizeof(t1)))
     {
-        printf("用法: write [-t|-x] <offset> <内容>\n");
+        color_print(C_WARN "用法: write [-t|-x] <offset> <内容>\n");
         return;
     }
     if (strcmp(t1, "-x") == 0) is_hex = CCTRUE;
@@ -262,7 +272,7 @@ static void cmd_write(DemoState *st, const char **pp)
     {
         if (!take_tok(&p, t2, sizeof(t2)))
         {
-            printf("缺少偏移\n");
+            color_print(C_WARN "缺少偏移\n");
             return;
         }
     }
@@ -275,20 +285,20 @@ static void cmd_write(DemoState *st, const char **pp)
     CCUINT64 off = 0;
     if (!parse_u64(t2, &off))
     {
-        printf("偏移非法: %s\n", t2);
+        color_print(C_ERR "偏移非法: %s\n", t2);
         return;
     }
     char cur[512];
     if (ccfiles_getcur(st->fs, cur, sizeof(cur)) == CC_FS_ERR_NOENT)
     {
-        printf("请先 open 或 create 一个文件\n");
+        color_print(C_WARN "请先 open 或 create 一个文件\n");
         return;
     }
 
     const char *payload = rest_of(&p);
     if (!payload)
     {
-        printf("缺少写入内容\n");
+        color_print(C_WARN "缺少写入内容\n");
         return;
     }
 
@@ -299,12 +309,12 @@ static void cmd_write(DemoState *st, const char **pp)
         CCINT32 r = parse_hex_stream(payload, buf, sizeof(buf), &n);
         if (r == -1)
         {
-            printf("十六进制串非法（需成对十六进制位）\n");
+            color_print(C_ERR "十六进制串非法（需成对十六进制位）\n");
             return;
         }
         if (r == -2)
         {
-            printf("内容超出 %u 字节上限\n", (unsigned)sizeof(buf));
+            color_print(C_ERR "内容超出 %u 字节上限\n", (CCUINT32)sizeof(buf));
             return;
         }
     }
@@ -317,10 +327,10 @@ static void cmd_write(DemoState *st, const char **pp)
 
     CCINT64 w = ccfiles_write(st->fs, buf, off, n);
     if (w < 0)
-        printf("[失败] 写入: %s (%d)\n", fs_result_name((CCINT32)w), (int)w);
+        color_print(C_ERR "[失败] 写入: %s (%d)\n", fs_result_name((CCINT32)w), (int)w);
     else
-        printf("[完成] 写入 %lld 字节 @ %llu（%s）\n",
-            (long long)w, (unsigned long long)off, is_hex ? "hex" : "text");
+        color_print(C_OK "[完成] 写入 %ld 字节 @ %lu（%s）\n",
+            w, off, is_hex ? "hex" : "text");
 }
 
 static void cmd_read(DemoState *st, const char **pp)
@@ -339,12 +349,12 @@ static void cmd_read(DemoState *st, const char **pp)
     }
     if (have && !parse_u64(t1, &off))
     {
-        printf("偏移非法: %s\n", t1);
+        color_print(C_ERR "偏移非法: %s\n", t1);
         return;
     }
     if (take_tok(&p, t2, sizeof(t2)) && !parse_u64(t2, &size))
     {
-        printf("大小非法: %s\n", t2);
+        color_print(C_ERR "大小非法: %s\n", t2);
         return;
     }
 
@@ -353,7 +363,7 @@ static void cmd_read(DemoState *st, const char **pp)
     char cur[512];
     if (ccfiles_getcur(st->fs, cur, sizeof(cur)) == CC_FS_ERR_NOENT)
     {
-        printf("请先 open 或 create 一个文件\n");
+        color_print(C_WARN "请先 open 或 create 一个文件\n");
         return;
     }
 
@@ -361,29 +371,29 @@ static void cmd_read(DemoState *st, const char **pp)
     CCINT64 rd = ccfiles_read(st->fs, buf, off, size);
     if (rd < 0)
     {
-        printf("[失败] 读取: %s (%d)\n", fs_result_name((CCINT32)rd), (int)rd);
+        color_print(C_ERR "[失败] 读取: %s (%d)\n", fs_result_name((CCINT32)rd), (int)rd);
         return;
     }
     if (rd == 0)
     {
-        printf("(EOF)\n");
+        color_print(C_DIM "(EOF)\n");
         return;
     }
 
     if (!hexonly)
     {
         CCINT64 i;
-        printf("文本> ");
+        color_print(C_INFO "文本> ");
         for (i = 0; i < rd; i++)
         {
             unsigned char c = buf[i];
-            if (c == '\n') printf("\\n");
-            else if (c == '\r') printf("\\r");
-            else if (c == '\t') printf("\\t");
-            else if (c >= 32 && c < 127) printf("%c", (char)c);
-            else printf("\\x%02X", c);
+            if (c == '\n') color_print("\\n");
+            else if (c == '\r') color_print("\\r");
+            else if (c == '\t') color_print("\\t");
+            else if (c >= 32 && c < 127) color_print("%c", (char)c);
+            else color_print("\\x%02X", (CCUINT32)c);
         }
-        printf("\n");
+        color_print("\n");
     }
     print_hexdump(buf, (CCUINT32)rd, off);
 }
@@ -393,7 +403,7 @@ static void cmd_stat(DemoState *st, const char **pp)
     char path[512];
     if (!take_tok(pp, path, sizeof(path)))
     {
-        printf("用法: stat <path>\n");
+        color_print(C_WARN "用法: stat <path>\n");
         return;
     }
     CCFsStat stt;
@@ -401,15 +411,15 @@ static void cmd_stat(DemoState *st, const char **pp)
     CCINT32 r = ccfiles_stat(st->fs, path, &stt);
     if (r != CC_FS_OK)
     {
-        printf("[失败] stat: %s (%d)\n", fs_result_name(r), (int)r);
+        color_print(C_ERR "[失败] stat: %s (%d)\n", fs_result_name(r), (int)r);
         return;
     }
-    printf("  type    : %s\n", type_name(stt.type));
-    printf("  size    : %llu B\n", (unsigned long long)stt.size);
-    printf("  ctime   : %llu\n", (unsigned long long)stt.ctime);
-    printf("  mtime   : %llu\n", (unsigned long long)stt.mtime);
-    printf("  readonly: %s\n", stt.readonly ? "true" : "false");
-    printf("  crc32   : 0x%08X\n", (unsigned)stt.crc32);
+    color_print(C_INFO "  type    : " C_RESET "%s\n", type_name(stt.type));
+    color_print("  size    : %lu B\n", stt.size);
+    color_print("  ctime   : %lu\n", stt.ctime);
+    color_print("  mtime   : %lu\n", stt.mtime);
+    color_print("  readonly: %s\n", stt.readonly ? "true" : "false");
+    color_print("  crc32   : 0x%08X\n", stt.crc32);
 }
 
 static void cmd_ls(DemoState *st, const char **pp)
@@ -420,11 +430,11 @@ static void cmd_ls(DemoState *st, const char **pp)
     CCINT32 r = ccfiles_list(st->fs, path, cb_list, &cnt);
     if (r != CC_FS_OK)
     {
-        printf("[失败] ls: %s (%d)\n", fs_result_name(r), (int)r);
+        color_print(C_ERR "[失败] ls: %s (%d)\n", fs_result_name(r), (int)r);
         return;
     }
-    if (cnt == 0) printf("  (空)\n");
-    else printf("  共 %u 项\n", cnt);
+    if (cnt == 0) color_print(C_DIM "  (空)\n");
+    else color_print(C_INFO "  共 %u 项\n", cnt);
 }
 
 static void cmd_find(DemoState *st, const char **pp)
@@ -434,17 +444,17 @@ static void cmd_find(DemoState *st, const char **pp)
     if (!take_tok(&p, path, sizeof(path)) ||
         !take_tok(&p, pat, sizeof(pat)))
     {
-        printf("用法: find <path> <pattern>\n");
+        color_print(C_WARN "用法: find <path> <pattern>\n");
         return;
     }
     CCUINT32 cnt = 0;
     CCINT32 r = ccfiles_find(st->fs, path, pat, cb_find, &cnt);
     if (r != CC_FS_OK)
     {
-        printf("[失败] find: %s (%d)\n", fs_result_name(r), (int)r);
+        color_print(C_ERR "[失败] find: %s (%d)\n", fs_result_name(r), (int)r);
         return;
     }
-    printf("  共命中 %u 项\n", cnt);
+    color_print(C_INFO "  共命中 %u 项\n", cnt);
 }
 
 static CCBOOL parse_mount_type(const char *s, CCUINT32 *out)
@@ -463,13 +473,13 @@ static void cmd_mount(DemoState *st, const char **pp)
         !take_tok(&p, real, sizeof(real)) ||
         !take_tok(&p, type, sizeof(type)))
     {
-        printf("用法: mount <v> <real> <dir|pkg|file>\n");
+        color_print(C_WARN "用法: mount <v> <real> <dir|pkg|file>\n");
         return;
     }
     CCUINT32 mt = 0;
     if (!parse_mount_type(type, &mt))
     {
-        printf("未知挂载类型: %s\n", type);
+        color_print(C_ERR "未知挂载类型: %s\n", type);
         return;
     }
     print_result("挂载", ccfiles_mount(st->fs, v, real, mt));
@@ -480,7 +490,7 @@ static void cmd_unmount(DemoState *st, const char **pp)
     char v[512];
     if (!take_tok(pp, v, sizeof(v)))
     {
-        printf("用法: unmount <v>\n");
+        color_print(C_WARN "用法: unmount <v>\n");
         return;
     }
     print_result("卸载", ccfiles_unmount(st->fs, v));
@@ -491,7 +501,7 @@ static void cmd_refresh(DemoState *st, const char **pp)
     char v[512];
     if (!take_tok(pp, v, sizeof(v)))
     {
-        printf("用法: refresh <v>\n");
+        color_print(C_WARN "用法: refresh <v>\n");
         return;
     }
     print_result("刷新", ccfiles_refresh(st->fs, v));
@@ -520,14 +530,14 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
     {
         char cwd[512];
         if (ccfiles_getcwd(st->fs, cwd, sizeof(cwd)) <= 0) strcpy(cwd, "?");
-        printf("%s\n", cwd);
+        color_print(C_INFO "%s\n", cwd);
     }
     else if (strcmp(cmd, "cd") == 0)
     {
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: cd <path>\n");
+            color_print(C_WARN "用法: cd <path>\n");
             return CCTRUE;
         }
         print_result("切换目录", ccfiles_chdir(st->fs, path));
@@ -543,17 +553,17 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: open <path>\n");
+            color_print(C_WARN "用法: open <path>\n");
             return CCTRUE;
         }
         CCINT32 r = ccfiles_open(st->fs, path);
         if (r == CC_FS_OK)
         {
-            printf("[完成] 打开 %s\n", path);
+            color_print(C_OK "[完成] 打开 %s\n", path);
         }
         else
         {
-            printf("[失败] 打开: %s (%d)\n", fs_result_name(r), (int)r);
+            color_print(C_ERR "[失败] 打开: %s (%d)\n", fs_result_name(r), (int)r);
         }
     }
     else if (strcmp(cmd, "create") == 0)
@@ -561,17 +571,17 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: create <path>\n");
+            color_print(C_WARN "用法: create <path>\n");
             return CCTRUE;
         }
         CCINT32 r = ccfiles_create_file(st->fs, path);
         if (r == CC_FS_OK)
         {
-            printf("[完成] 创建并选中 %s\n", path);
+            color_print(C_OK "[完成] 创建并选中 %s\n", path);
         }
         else
         {
-            printf("[失败] 创建: %s (%d)\n", fs_result_name(r), (int)r);
+            color_print(C_ERR "[失败] 创建: %s (%d)\n", fs_result_name(r), (int)r);
         }
     }
     else if (strcmp(cmd, "read") == 0) cmd_read(st, &p);
@@ -582,7 +592,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: mkdir <path>\n");
+            color_print(C_WARN "用法: mkdir <path>\n");
             return CCTRUE;
         }
         print_result("创建目录", ccfiles_create_dir(st->fs, path));
@@ -592,7 +602,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: rm <path>\n");
+            color_print(C_WARN "用法: rm <path>\n");
             return CCTRUE;
         }
         print_result("删除", ccfiles_remove(st->fs, path));
@@ -602,7 +612,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char path[512];
         if (!take_tok(&p, path, sizeof(path)))
         {
-            printf("用法: rmr <path>（rm -rf 递归删除）\n");
+            color_print(C_WARN "用法: rmr <path>（rm -rf 递归删除）\n");
             return CCTRUE;
         }
         print_result("递归删除", ccfiles_remove_recursive(st->fs, path));
@@ -612,7 +622,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char a[512], b[512];
         if (!take_tok(&p, a, sizeof(a)) || !take_tok(&p, b, sizeof(b)))
         {
-            printf("用法: cp <src> <dst>\n");
+            color_print(C_WARN "用法: cp <src> <dst>\n");
             return CCTRUE;
         }
         print_result("复制", ccfiles_cp(st->fs, a, b));
@@ -622,7 +632,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char a[512], b[512];
         if (!take_tok(&p, a, sizeof(a)) || !take_tok(&p, b, sizeof(b)))
         {
-            printf("用法: mv <src> <dst>\n");
+            color_print(C_WARN "用法: mv <src> <dst>\n");
             return CCTRUE;
         }
         print_result("移动", ccfiles_mv(st->fs, a, b));
@@ -632,7 +642,7 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char a[512], b[1024];
         if (!take_tok(&p, a, sizeof(a)) || !take_tok(&p, b, sizeof(b)))
         {
-            printf("用法: pack <v> <real>\n");
+            color_print(C_WARN "用法: pack <v> <real>\n");
             return CCTRUE;
         }
         print_result("打包", ccfiles_pack(st->fs, a, b));
@@ -642,14 +652,14 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
         char a[512], b[1024];
         if (!take_tok(&p, a, sizeof(a)) || !take_tok(&p, b, sizeof(b)))
         {
-            printf("用法: unpack <v> <real>\n");
+            color_print(C_WARN "用法: unpack <v> <real>\n");
             return CCTRUE;
         }
         print_result("解包", ccfiles_unpack(st->fs, a, b));
     }
     else
     {
-        printf("未知命令: %s（输入 -h 查看帮助）\n", cmd);
+        color_print(C_ERR "未知命令: %s（输入 -h 查看帮助）\n", cmd);
     }
 
     return CCTRUE;
@@ -661,12 +671,12 @@ static CCBOOL demo_dispatch(DemoState *st, char *line)
 
 int main(void)
 {
-    printf("水晶簇标准库 · 虚拟文件系统 demo（输入 -h 查看帮助，quit 退出）\n");
+    color_print(C_TITLE "水晶簇标准库 · 虚拟文件系统 demo（输入 -h 查看帮助，quit 退出）\n");
 
     CCFiles *fs = ccfiles_create();
     if (!fs)
     {
-        printf("[错误] ccfiles_create 失败\n");
+        color_print(C_ERR "[错误] ccfiles_create 失败\n");
         return 1;
     }
 
@@ -679,12 +689,12 @@ int main(void)
     {
         char cwd[512];
         if (ccfiles_getcwd(fs, cwd, sizeof(cwd)) <= 0) strcpy(cwd, "/");
-        printf("%s> ", cwd);
+        color_print(C_INFO "%s> " C_RESET, cwd);
         fflush(stdout);
 
         if (!fgets(line, sizeof(line), stdin))
         {
-            printf("\n");
+            color_print("\n");
             break;
         }
 

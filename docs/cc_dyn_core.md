@@ -42,8 +42,6 @@ CCINT32 cc_dyn_core_bitout(CCDyn *dyn, void *data, CCUINT32 begin, CCUINT32 len)
 
 **返回值：**
 
-范式：`0` 表示成功，`-1` 表示参数非法（如 `dyn`/`data` 为空、`align` 为 0、`size` 为负），`1` 表示业务失败。
-
 - **cc_dyn_core_push：**
 成功返回 0；容量不足且扩容失败、或长度溢出返回 1；参数非法返回 -1。
 - **cc_dyn_core_pop：**

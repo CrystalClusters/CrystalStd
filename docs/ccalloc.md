@@ -97,14 +97,7 @@ CCUINT32 deinit_ccalloc(void);
 
 ### 2.6 示例
 
-```C
-void *buf = ccalloc(NULL, 4096, "font atlas");   // 分配 + 注释
-buf = ccalloc(buf, 8192, "font atlas v2");        // 扩容 + 更新注释
-buf = ccalloc(buf, 2048, NULL);                   // 收缩，保留注释
-ccalloc(buf, 0, NULL);                            // 释放
-
-/* 进程退出时由析构函数自动 deinit_ccalloc()，输出残留泄漏并返回数量 */
-```
+分配、扩容、收缩与释放的典型写法见 [快速入门](快速入门.md) 的分配器章节。
 
 ---
 

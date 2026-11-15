@@ -17,10 +17,12 @@ CC_RUN_BEFORE_MAIN void _init_crystal_std_()
     init_cctime();
     init_ccthread();
     init_ccfiles();
+    init_ccnet();
 }
 
 CC_RUN_AFTER_MAIN void _deinit_crystal_std_()
 {
+    deinit_ccnet();
     deinit_ccfiles();
     deinit_ccthread();
     deinit_cctime();

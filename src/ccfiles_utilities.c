@@ -95,7 +95,7 @@ void fs_buf_free(CCDyn *b)
     b->capacity = 0;
 }
 /* 真实路径解析：绝对路径原样使用，相对路径拼接到可执行程序同层 res 目录 */
-CCINT32 fs_real_resolve(const char *real_path, CCDyn *out)
+CCINT32 fs_real_canon(const char *real_path, CCDyn *out)
 {
     if (!out || !real_path || !real_path[0])
         return CC_FS_ERR_PARAM;

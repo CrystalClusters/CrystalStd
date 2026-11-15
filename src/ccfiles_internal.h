@@ -139,7 +139,7 @@ CCINT32 fs_buf_put(CCDyn *b, const char *s);
 void fs_buf_clear(CCDyn *b);
 const char *fs_buf_str(const CCDyn *b);
 void fs_buf_free(CCDyn *b);
-CCINT32 fs_real_resolve(const char *real_path, CCDyn *out);
+CCINT32 fs_real_canon(const char *real_path, CCDyn *out);
 CCINT32 fs_unlink_file(const char *path);
 CCINT32 fs_rmdir_dir(const char *path);
 CCINT32 fs_rename_path(const char *from, const char *to);
