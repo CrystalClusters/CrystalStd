@@ -1,6 +1,6 @@
 # CrystalStd-水晶簇标准库
 
-> v1.0.0-beta · [版本发行说明](CHANGELOG.md)
+> v1.0.0 · [版本发行说明](CHANGELOG.md)
 
 该标准库是专为水晶簇件体系设计的二进制标准解决方案，纯C编写。用于替代 crystal clusters 体系内对C标准库的直接引用，增强开发可控性和一致性。此解决方案跨平台，支持amd64、arm64等指令集，Linux、Windows、Android等平台。
 
