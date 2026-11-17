@@ -58,6 +58,19 @@
 - 级别：quick
 - 代码：`tests/dyn_core.c` · `CC_CASE("DYN-ALIGN-002")`
 
+## DYN-ALIGN-003 向上对齐溢出
+
+- 状态：已实现
+- 前置：手工构造 `CCDyn`，`array == NULL`、`capacity == 0`，`size` 接近 `UINT32_MAX`。
+- 步骤：`size = 0xFFFFFFF8`、`align = 16` 时 push 1 字节；
+  `size = 0xFFFFFFFF`、`align = 0xFFFFFFFF` 时 push 1 字节。
+- 预期：两次均返回 1（长度溢出）；不分配内存，`size` 保持原值。
+  第一组使对齐结果 `0x100000000` 超出 `CCUINT32`，第二组使对齐后追加的总长度溢出。
+- 真值来源：规范（`push` 长度溢出返回 1）；缺陷回归（对齐加法 32 位回绕）。
+- 平台：all
+- 级别：quick
+- 代码：`tests/dyn_core.c` · `CC_CASE("DYN-ALIGN-003")`
+
 ## DYN-SEEK-001 set/get/seek 基本语义
 
 - 状态：已实现

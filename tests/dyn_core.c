@@ -148,6 +148,27 @@ static void test_dyn_pop_align(void)
     dyn_release(&d);
 }
 
+static void test_dyn_push_align_overflow(void)
+{
+    CC_CASE("DYN-ALIGN-003", "向上对齐溢出");
+    CCDyn d = dyn_make();
+    CCUINT8 v = 0x5A;
+
+    // size 接近上限，向上对齐到 16 需要 0x100000000，超出 CCUINT32
+    d.size = 0xFFFFFFF8u;
+    dyn_expect(cc_dyn_core_push(&d, 16, 1, &v) == 1, "对齐结果超出 UINT32_MAX 返回 1");
+    dyn_expect(d.size == 0xFFFFFFF8u, "对齐溢出时 size 保持原值");
+    dyn_expect(d.array == NULL && d.capacity == 0, "对齐溢出时未分配内存");
+
+    // 已对齐到 UINT32_MAX，追加元素后总长度仍会溢出
+    d.size = 0xFFFFFFFFu;
+    dyn_expect(cc_dyn_core_push(&d, 0xFFFFFFFFu, 1, &v) == 1, "追加后长度溢出返回 1");
+    dyn_expect(d.size == 0xFFFFFFFFu, "长度溢出时 size 保持原值");
+    dyn_expect(d.array == NULL && d.capacity == 0, "长度溢出时未分配内存");
+
+    dyn_release(&d);
+}
+
 static void test_dyn_set_get_seek(void)
 {
     CC_CASE("DYN-SEEK-001", "set/get/seek 基本语义");
@@ -475,6 +496,7 @@ void test_dyn_core(void)
     test_dyn_push_pop_basic();
     test_dyn_push_align();
     test_dyn_pop_align();
+    test_dyn_push_align_overflow();
     test_dyn_set_get_seek();
     test_dyn_get_shift();
     test_dyn_get_multi();

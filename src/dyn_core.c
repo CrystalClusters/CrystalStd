@@ -19,11 +19,17 @@
  * ============================================================================
  */
 
-// 向上对齐到 align 的倍数（align 保证非 0）
-static inline CCUINT32 _dyn_round_up_(CCUINT32 value, CCUINT32 align)
+// 向上对齐到 align 的倍数（align 保证非 0）。
+// 中间计算使用 64 位，避免 value 接近 UINT32_MAX 时加法回绕；
+// 对齐结果超出 CCUINT32 可表示范围时返回 -1，成功返回 0 并写回 *out。
+static inline CCINT32 _dyn_round_up_(CCUINT32 value, CCUINT32 align, CCUINT32 *out)
 {
-    CCUINT32 rem = value % align;
-    return rem ? (value + align - rem) : value;
+    CCUINT64 rem = (CCUINT64)value % align;
+    CCUINT64 aligned = rem ? ((CCUINT64)value + align - rem) : (CCUINT64)value;
+    if (aligned > 0xFFFFFFFFu)
+        return -1;
+    *out = (CCUINT32)aligned;
+    return 0;
 }
 
 // 向下对齐到 align 的倍数（align 保证非 0）
@@ -125,8 +131,10 @@ CCINT32 cc_dyn_core_push(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data)
         return 0;
 
     CCUINT32 data_size = (CCUINT32)size;
-    // 末尾向上对齐，避免出现半个元素
-    CCUINT32 aligned = _dyn_round_up_(dyn->size, align);
+    // 末尾向上对齐，避免出现半个元素；对齐结果溢出时明确报错
+    CCUINT32 aligned;
+    if (_dyn_round_up_(dyn->size, align, &aligned) != 0)
+        return 1;
     CCUINT64 need = (CCUINT64)aligned + data_size;
     if (need > 0xFFFFFFFFu)
         return 1;
