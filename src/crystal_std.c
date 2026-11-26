@@ -12,7 +12,9 @@
 CC_RUN_BEFORE_MAIN void _init_crystal_std_()
 {
     init_console();
+#ifdef CC_DEBUG
     color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT) "开启水晶簇标准库\n");
+#endif
     init_ccalloc();
     init_cctime();
     init_ccthread();
@@ -27,6 +29,8 @@ CC_RUN_AFTER_MAIN void _deinit_crystal_std_()
     deinit_ccthread();
     deinit_cctime();
     deinit_ccalloc();
+#ifdef CC_DEBUG
     color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT) "关闭水晶簇标准库\n");
+#endif
     deinit_console();
 }
