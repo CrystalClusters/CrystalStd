@@ -53,7 +53,7 @@ CCINT32 fs_buf_putn(CCDyn *b, const char *s, CCUINT32 n)
 {
     if (!b)
         return CC_FS_ERR_PARAM;
-    /* 移除旧终止符，避免每次追加都多留一个 '\0' */
+    // 移除旧终止符，避免每次追加都多留一个 '\0'
     if (b->size > 0 && ((char *)b->array)[b->size - 1] == '\0')
         b->size -= 1;
     if (n > 0 && cc_dyn_core_push(b, 1, (CCINT32)n, (void *)s) != 0)
@@ -94,7 +94,8 @@ void fs_buf_free(CCDyn *b)
     b->size = 0;
     b->capacity = 0;
 }
-/* 真实路径解析：绝对路径原样使用，相对路径拼接到可执行程序同层 res 目录 */
+
+// 真实路径解析：绝对路径原样使用，相对路径拼接到可执行程序同层 res 目录
 CCINT32 fs_real_canon(const char *real_path, CCDyn *out)
 {
     if (!out || !real_path || !real_path[0])
@@ -117,7 +118,7 @@ CCINT32 fs_real_canon(const char *real_path, CCDyn *out)
         r = fs_buf_put(out, real_path);
     return r;
 }
-/* 是否为符号链接 / Windows junction 等重解析点（不跟随） */
+// 是否为符号链接 / Windows junction 等重解析点（不跟随）
 CCBOOL fs_is_link_path(const char *path)
 {
     if (!path || !path[0])
@@ -135,20 +136,20 @@ CCBOOL fs_is_link_path(const char *path)
 #endif
 }
 
-/* 只删除链接本身，绝不进入链接目标；file symlink / directory junction 均可 */
+// 只删除链接本身，绝不进入链接目标；file symlink / directory junction 均可
 CCINT32 fs_remove_link_path(const char *path)
 {
     if (!path || !path[0])
         return CC_FS_ERR_PARAM;
 #ifdef CC_WINDOWS
-    /* junction / 目录符号链接用 rmdir 删除链接本身 */
+    // junction / 目录符号链接用 rmdir 删除链接本身
     if (_rmdir(path) == 0)
         return CC_FS_OK;
 #endif
     return (remove(path) == 0) ? CC_FS_OK : CC_FS_ERR_IO;
 }
 
-/* 删除物理文件（unlink）；链接只删除链接本身 */
+// 删除物理文件（unlink）；链接只删除链接本身
 CCINT32 fs_unlink_file(const char *path)
 {
     if (fs_is_link_path(path))
@@ -156,7 +157,7 @@ CCINT32 fs_unlink_file(const char *path)
     return (remove(path) == 0) ? CC_FS_OK : CC_FS_ERR_IO;
 }
 
-/* 删除物理空目录（rmdir）；链接只删除链接本身 */
+// 删除物理空目录（rmdir）；链接只删除链接本身
 CCINT32 fs_rmdir_dir(const char *path)
 {
     if (fs_is_link_path(path))
@@ -168,7 +169,7 @@ CCINT32 fs_rmdir_dir(const char *path)
 #endif
 }
 
-/* 物理重命名 / 移动。目标已存在时由调用方先删除（rename 的覆盖语义因平台而异）。 */
+// 物理重命名 / 移动。目标已存在时由调用方先删除（rename 的覆盖语义因平台而异）。
 CCINT32 fs_rename_path(const char *from, const char *to)
 {
     return (rename(from, to) == 0) ? CC_FS_OK : CC_FS_ERR_IO;
@@ -212,8 +213,8 @@ CCUINT64 fs_file_mtime(const char *path)
     return (CCUINT64)st.st_mtime;
 }
 
-/* 逐级创建目录（`/` 或 `\` 分隔，已归一为 `/`）；路径长度只受内存约束。
-   真实创建失败（权限 / 非法名）如实返回 CC_FS_ERR_IO，不再静默忽略。 */
+// 逐级创建目录（`/` 或 `\` 分隔，已归一为 `/`）；路径长度只受内存约束。
+// 真实创建失败（权限 / 非法名）如实返回 CC_FS_ERR_IO，不再静默忽略。
 CCINT32 fs_mkdirs(const char *path)
 {
     if (!path)
@@ -228,7 +229,7 @@ CCINT32 fs_mkdirs(const char *path)
     }
 
     char *b = (char *)buf.array;
-    CCUINT32 len = buf.size - 1; /* 去掉末尾 '\0' */
+    CCUINT32 len = buf.size - 1; // 去掉末尾 '\0'
     for (CCUINT32 i = 0; i <= len; i++)
     {
         if (b[i] == '/' || b[i] == '\0')
@@ -244,7 +245,7 @@ CCINT32 fs_mkdirs(const char *path)
 #else
                     mkdir(b, 0755);
 #endif
-                    /* 并发 / 已存在不算错；创建后仍不是目录才是真失败 */
+                    // 并发 / 已存在不算错；创建后仍不是目录才是真失败
                     if (!fs_is_dir_path(b))
                     {
                         r = CC_FS_ERR_IO;
@@ -283,8 +284,11 @@ static void fs_rm_items_free(CCDyn *stack)
     while (stack->size >= (CCUINT32)sizeof(CCFsRmItem))
     {
         CCFsRmItem it;
-        if (cc_dyn_core_pop(stack, (CCUINT32)sizeof(CCFsRmItem),
-                            (CCINT32)sizeof(CCFsRmItem), &it) != 0)
+        if (cc_dyn_core_pop(
+                stack, (CCUINT32)sizeof(CCFsRmItem),
+                (CCINT32)sizeof(CCFsRmItem), &it
+            ) != 0
+        )
             break;
         if (it.path)
             ccalloc(it.path, 0, NULL);
@@ -301,8 +305,11 @@ static CCINT32 fs_rm_push(CCDyn *stack, const char *path, CCBOOL expanded)
     CCFsRmItem it;
     it.path = dup;
     it.expanded = expanded;
-    if (cc_dyn_core_push(stack, (CCUINT32)sizeof(CCFsRmItem),
-                         (CCINT32)sizeof(CCFsRmItem), &it) != 0)
+    if (cc_dyn_core_push(
+            stack, (CCUINT32)sizeof(CCFsRmItem),
+            (CCINT32)sizeof(CCFsRmItem), &it
+        ) != 0
+    )
     {
         ccalloc(dup, 0, NULL);
         return CC_FS_ERR_NOSPACE;
@@ -310,7 +317,7 @@ static CCINT32 fs_rm_push(CCDyn *stack, const char *path, CCBOOL expanded)
     return CC_FS_OK;
 }
 
-/* 把 dir 下的直接子项压栈；目录自身由调用方压 expanded 标记 */
+// 把 dir 下的直接子项压栈；目录自身由调用方压 expanded 标记
 static CCINT32 fs_rm_push_children(CCDyn *stack, const char *dir)
 {
     CCDyn child;
@@ -335,13 +342,14 @@ static CCINT32 fs_rm_push_children(CCDyn *stack, const char *dir)
     h = FindFirstFileA(fs_buf_str(&pattern), &fd);
     if (h == INVALID_HANDLE_VALUE)
     {
-        /* 空目录 / 路径不存在交给后续 rmdir 判定；真实 IO/权限错误必须上抛 */
+        // 空目录 / 路径不存在交给后续 rmdir 判定；真实 IO/权限错误必须上抛
         DWORD err = GetLastError();
         if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND ||
             err == ERROR_NO_MORE_FILES)
         {
-            ret = CC_FS_OK;
-            goto Succeeded;
+            fs_buf_free(&pattern);
+            fs_buf_free(&child);
+            return CC_FS_OK;
         }
         ret = CC_FS_ERR_IO;
         goto FailedtoEnumerate;
@@ -377,16 +385,15 @@ static CCINT32 fs_rm_push_children(CCDyn *stack, const char *dir)
     FindClose(h);
     h = INVALID_HANDLE_VALUE;
 
-Succeeded:
     fs_buf_free(&pattern);
     fs_buf_free(&child);
-    return ret;
+    return CC_FS_OK;
 
 FailedtoEnumerate:
     if (h != INVALID_HANDLE_VALUE)
         FindClose(h);
-    fs_buf_free(&pattern);
 FailedtoBuildPattern:
+    fs_buf_free(&pattern);
 #else
     DIR *d = opendir(dir);
     if (!d)
@@ -431,7 +438,7 @@ FailedtoOpenDir:
     return ret;
 }
 
-/* 删除物理文件 / 整棵目录树；路径不存在视为成功。 */
+// 删除物理文件 / 整棵目录树；路径不存在视为成功。
 CCINT32 fs_remove_tree(const char *path)
 {
     if (!path || !path[0])
@@ -451,8 +458,11 @@ CCINT32 fs_remove_tree(const char *path)
 
     while (stack.size >= (CCUINT32)sizeof(CCFsRmItem))
     {
-        if (cc_dyn_core_pop(&stack, (CCUINT32)sizeof(CCFsRmItem),
-                            (CCINT32)sizeof(CCFsRmItem), &cur) != 0)
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCFsRmItem),
+                (CCINT32)sizeof(CCFsRmItem), &cur
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_IO;
             goto FailedtoRemoveTree;
@@ -468,7 +478,7 @@ CCINT32 fs_remove_tree(const char *path)
             continue;
         }
 
-        /* 符号链接 / junction：只删链接本身，禁止下钻目标目录 */
+        // 符号链接 / junction：只删链接本身，禁止下钻目标目录
         if (fs_is_link_path(cur.path))
         {
             ret = fs_remove_link_path(cur.path);
@@ -492,7 +502,7 @@ CCINT32 fs_remove_tree(const char *path)
             continue;
         }
 
-        /* 目录：先压回展开标记，再压子项，保证子项先于目录 rmdir */
+        // 目录：先压回展开标记，再压子项，保证子项先于目录 rmdir
         ret = fs_rm_push(&stack, cur.path, CCTRUE);
         if (ret != CC_FS_OK)
             goto FailedtoRemoveTree;
@@ -515,10 +525,10 @@ FailedtoRemoveTree:
     return ret;
 }
 
-/* 取可执行程序所在目录（`/` 归一） */
+// 取可执行程序所在目录（`/` 归一）
 void fs_init_exe_dir(void)
 {
-    /* 这是操作系统路径，受 OS 自身长度上限约束，与 VFS 路径无关 */
+    // 这是操作系统路径，受 OS 自身长度上限约束，与 VFS 路径无关
     char buf[4096];
     buf[0] = '\0';
 #ifdef CC_WINDOWS
@@ -541,7 +551,7 @@ void fs_init_exe_dir(void)
         if (buf[i] == '\\')
             buf[i] = '/';
 
-    /* 去掉末尾文件名 */
+    // 去掉末尾文件名
     CCINT32 cut = -1;
     for (CCINT32 i = (CCINT32)strlen(buf) - 1; i >= 0; i--)
     {
@@ -560,7 +570,8 @@ void fs_init_exe_dir(void)
     snprintf(full, sizeof(full), "%s/res", buf);
     ccfiles_var.res_base = fs_strdup(full, CC_DBG_REL_TAG("资源根目录", NULL));
 }
-/* 64 位定位 */
+
+// 64 位定位
 CCINT32 fs_fseek(FILE *fp, CCUINT64 off)
 {
 #ifdef CC_WINDOWS
@@ -570,7 +581,7 @@ CCINT32 fs_fseek(FILE *fp, CCUINT64 off)
 #endif
 }
 
-/* 把文件截断 / 扩展到指定长度 */
+// 把文件截断 / 扩展到指定长度
 CCINT32 fs_truncate(FILE *fp, CCUINT64 size)
 {
 #ifdef CC_WINDOWS
@@ -579,7 +590,8 @@ CCINT32 fs_truncate(FILE *fp, CCUINT64 size)
     return (ftruncate(fileno(fp), (off_t)size) == 0) ? 0 : 1;
 #endif
 }
-/* 取文件路径的父目录（就地截断 path） */
+
+// 取文件路径的父目录（就地截断 path）
 void fs_dir_of(char *path)
 {
     CCINT32 cut = -1;

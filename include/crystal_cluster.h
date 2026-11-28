@@ -4,7 +4,7 @@
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-11
  * @Description: 水晶簇体系的第一个头文件，也作为通用基础定义头文件。
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #ifndef _INCLUDE_CRYSTAL_CLUSTER_H_
@@ -23,7 +23,7 @@
  * 调试/发布宏切换
  * 默认情况下采用debug模式
  */
-#if !defined(CC_RELEASE) && !defined (CC_DEBUG)
+#if !defined(CC_RELEASE) && !defined(CC_DEBUG)
 #define CC_DEBUG
 #endif
 
@@ -54,7 +54,7 @@ typedef int64_t CCINT64;
 typedef intptr_t CCINTPTR;
 
 #ifdef __ANDROID__
-#  define CC_ANDROID 
+#  define CC_ANDROID
 #elif defined _WIN32
 #  define CC_WINDOWS
 #elif defined __linux__
@@ -67,7 +67,7 @@ typedef intptr_t CCINTPTR;
 #define CCTRUE  1
 #define CCFALSE 0
 #ifndef NULL
-#  define NULL (void*)0
+#  define NULL (void *)0
 #endif
 
 #define CC_RUN_BEFORE_MAIN __attribute__((constructor))
@@ -79,6 +79,6 @@ typedef intptr_t CCINTPTR;
  * 通用函数签名定义
  */
 
-typedef CCINT32(*CCDataCallback)(void *data, void *user);
+typedef CCINT32 (*CCDataCallback)(void *data, void *user);
 
 #endif

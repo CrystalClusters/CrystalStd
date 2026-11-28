@@ -61,8 +61,9 @@ static CCINT32 _dyn_ensure_capacity_(CCDyn *dyn, CCUINT32 need)
     if (new_cap > 0xFFFFFFFFu)
         return 1;
 
-    CCUINT8 *tmp = (CCUINT8*)ccalloc(NULL, new_cap,
-        CC_DBG_REL_TAG("动态数组数据", NULL));
+    CCUINT8 *tmp = (CCUINT8 *)ccalloc(
+        NULL, new_cap, CC_DBG_REL_TAG("动态数组数据", NULL)
+    );
     if (!tmp)
         return 1;
     // ccalloc 不清零，未定义区域必须为 0
@@ -92,8 +93,9 @@ static void _dyn_maybe_shrink_(CCDyn *dyn)
         new_cap = (CCUINT32)CC_MEM_ALIGN_MIN;
 
     // realloc 语义原地缩容（指针不变），失败时保持原状
-    void *tmp = ccalloc(dyn->array, new_cap,
-        CC_DBG_REL_TAG("动态数组数据", NULL));
+    void *tmp = ccalloc(
+        dyn->array, new_cap, CC_DBG_REL_TAG("动态数组数据", NULL)
+    );
     if (tmp)
     {
         dyn->array = tmp;
@@ -141,7 +143,7 @@ CCINT32 cc_dyn_core_push(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data)
     if (_dyn_ensure_capacity_(dyn, (CCUINT32)need) != 0)
         return 1;
 
-    CCUINT8 *base = (CCUINT8*)dyn->array;
+    CCUINT8 *base = (CCUINT8 *)dyn->array;
     // 对齐产生的缝隙默认为 0
     if (aligned > dyn->size)
         memset(base + dyn->size, 0, aligned - dyn->size);
@@ -168,7 +170,7 @@ CCINT32 cc_dyn_core_pop(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data)
         start = dyn->size - align;
 
     // 从 start 读出 size 字节，超出有效数据的部分为 0
-    CCUINT8 *base = (CCUINT8*)dyn->array;
+    CCUINT8 *base = (CCUINT8 *)dyn->array;
     memset(data, 0, data_size);
     if (start < dyn->size)
     {
@@ -195,7 +197,7 @@ CCINT32 cc_dyn_core_set(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data, CC
     if (offset + data_size > dyn->size)
         return 1;
 
-    memcpy((CCUINT8*)dyn->array + (CCUINT32)offset, data, data_size);
+    memcpy((CCUINT8 *)dyn->array + (CCUINT32)offset, data, data_size);
     return 0;
 }
 
@@ -213,7 +215,7 @@ CCINT32 cc_dyn_core_get(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data, CC
         return 1;
 
     CCUINT32 off = (CCUINT32)offset;
-    CCUINT8 *base = (CCUINT8*)dyn->array;
+    CCUINT8 *base = (CCUINT8 *)dyn->array;
     // 取出数据
     memcpy(data, base + off, data_size);
     // 删除该元素，尾部元素内存向前平移
@@ -242,7 +244,7 @@ CCINT32 cc_dyn_core_seek(CCDyn *dyn, CCUINT32 align, CCINT32 size, void *data, C
         CCUINT32 avail = dyn->size - (CCUINT32)offset;
         if (avail > data_size)
             avail = data_size;
-        memcpy(data, (CCUINT8*)dyn->array + (CCUINT32)offset, avail);
+        memcpy(data, (CCUINT8 *)dyn->array + (CCUINT32)offset, avail);
     }
     return 0;
 }
@@ -265,12 +267,12 @@ CCINT32 cc_dyn_core_bitin(CCDyn *dyn, void *data, CCUINT32 begin, CCUINT32 len)
     if (_dyn_ensure_capacity_(dyn, (CCUINT32)new_bytes) != 0)
         return 1;
 
-    CCUINT8 *base = (CCUINT8*)dyn->array;
+    CCUINT8 *base = (CCUINT8 *)dyn->array;
     // 自后向前，把 [begin, old_bits) 的比特整体后移 len 位
     for (CCUINT64 i = old_bits; i > (CCUINT64)begin; i--)
         _dyn_set_bit_(base, i + len - 1, _dyn_get_bit_(base, i - 1));
     // 把 data 的前 len 个比特写入 [begin, begin + len)
-    const CCUINT8 *src = (const CCUINT8*)data;
+    const CCUINT8 *src = (const CCUINT8 *)data;
     for (CCUINT64 i = 0; i < len; i++)
         _dyn_set_bit_(base, (CCUINT64)begin + i, _dyn_get_bit_(src, i));
     dyn->size = (CCUINT32)new_bytes;
@@ -289,8 +291,8 @@ CCINT32 cc_dyn_core_bitout(CCDyn *dyn, void *data, CCUINT32 begin, CCUINT32 len)
     if ((CCUINT64)begin + len > total_bits)
         return 1;
 
-    CCUINT8 *dst = (CCUINT8*)data;
-    const CCUINT8 *base = (const CCUINT8*)dyn->array;
+    CCUINT8 *dst = (CCUINT8 *)data;
+    const CCUINT8 *base = (const CCUINT8 *)dyn->array;
     memset(dst, 0, (size_t)(((CCUINT64)len + 7) >> 3));
     for (CCUINT64 i = 0; i < len; i++)
         _dyn_set_bit_(dst, i, _dyn_get_bit_(base, (CCUINT64)begin + i));

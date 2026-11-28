@@ -185,7 +185,7 @@ static void test_dyn_set_get_seek(void)
 
     // set 下标 1
     dyn_expect(cc_dyn_core_set(&d, 4, 4, rep, 1) == 0, "set 下标 1 成功");
-    dyn_expect(memcmp((CCUINT8*)d.array + 4, rep, 4) == 0, "set 后下标 1 内容已替换");
+    dyn_expect(memcmp((CCUINT8 *)d.array + 4, rep, 4) == 0, "set 后下标 1 内容已替换");
 
     // get 下标 1（取回并删除）
     dyn_expect(cc_dyn_core_get(&d, 4, 4, out, 1) == 0, "get 下标 1 成功");
@@ -431,7 +431,7 @@ static void test_dyn_bits_lsb(void)
     CCUINT8 src = 0x05;     // 比特 0=1, 1=0, 2=1
     dyn_expect(cc_dyn_core_bitin(&d, &src, 0, 3) == 0, "bitin 3 比特成功");
     dyn_expect(d.size == 1, "3 比特占 1 字节");
-    dyn_expect(((CCUINT8*)d.array)[0] == 0x05, "LSB-first：低位比特在字节低位");
+    dyn_expect(((CCUINT8 *)d.array)[0] == 0x05, "LSB-first：低位比特在字节低位");
 
     CCUINT8 dst = 0;
     dyn_expect(cc_dyn_core_bitout(&d, &dst, 0, 3) == 0, "bitout 3 比特成功");
@@ -441,7 +441,7 @@ static void test_dyn_bits_lsb(void)
     CCUINT8 one = 0x01;
     dyn_expect(cc_dyn_core_bitin(&d, &one, 8, 1) == 0, "在末尾追加 1 比特成功");
     dyn_expect(d.size == 2, "跨字节后 size 为 2");
-    dyn_expect(((CCUINT8*)d.array)[1] == 0x01, "第二字节的 bit0 为 1");
+    dyn_expect(((CCUINT8 *)d.array)[1] == 0x01, "第二字节的 bit0 为 1");
 
     dyn_release(&d);
 }
@@ -452,14 +452,14 @@ static void test_dyn_bits_insert(void)
     CCDyn d = dyn_make();
     CCUINT8 ones = 0xFF;
     dyn_expect(cc_dyn_core_bitin(&d, &ones, 0, 8) == 0, "bitin 8 个 1 成功");
-    dyn_expect(d.size == 1 && ((CCUINT8*)d.array)[0] == 0xFF, "8 比特全 1 内容正确");
+    dyn_expect(d.size == 1 && ((CCUINT8 *)d.array)[0] == 0xFF, "8 比特全 1 内容正确");
 
     // 在 begin=4 处插入 4 个 0 比特，把高位整体后移
     CCUINT8 zeros = 0x00;
     dyn_expect(cc_dyn_core_bitin(&d, &zeros, 4, 4) == 0, "中间插入 4 个 0 比特成功");
     dyn_expect(d.size == 2, "插入 4 比特后 size 为 2");
-    dyn_expect(((CCUINT8*)d.array)[0] == 0x0F, "低半字节保留 1，高半字节为插入的 0");
-    dyn_expect(((CCUINT8*)d.array)[1] == 0x0F, "被后移的高 4 位 1 落在第二字节低半字节");
+    dyn_expect(((CCUINT8 *)d.array)[0] == 0x0F, "低半字节保留 1，高半字节为插入的 0");
+    dyn_expect(((CCUINT8 *)d.array)[1] == 0x0F, "被后移的高 4 位 1 落在第二字节低半字节");
 
     CCUINT8 out[2] = {0};
     dyn_expect(cc_dyn_core_bitout(&d, out, 0, 12) == 0, "bitout 12 比特成功");

@@ -4,13 +4,13 @@
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-10
  * @Description: 自建内存分配器
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
-#ifndef _INCLUDE_CCALLOC_C_
-#define _INCLUDE_CCALLOC_C_
+#ifndef _INCLUDE_CCALLOC_H_
+#define _INCLUDE_CCALLOC_H_
 
-#include "crystal_cluster.h"
+#include <crystal_cluster.h>
 
 // 内存对齐粒度（字节）
 // 实际用户大小按该粒度向上取整；该值应不大于系统页大小。
@@ -47,12 +47,12 @@
  * 内存分配器，详情见文档：
  * <工程根目录>/docs/ccalloc.md
  */
-void* ccalloc(void *old, CCUINT64 size, const char *comment);
+void *ccalloc(void *old, CCUINT64 size, const char *comment);
 
 /**
  * 获取合法内存块注释
  * 非法内存块返回 NULL
  */
-const char* get_comment(void *ptr);
+const char *get_comment(void *ptr);
 
 #endif

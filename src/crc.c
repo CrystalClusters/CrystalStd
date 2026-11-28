@@ -1,6 +1,15 @@
+/*
+ * @Author: Renascent Adore lizaterop@gmail.com
+ * @Date: 2026-09
+ * @LastEditors: Renascent Adore lizaterop@gmail.com
+ * @LastEditTime: 2026-11
+ * @Description: CRC32 校验计算。
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
+ */
+
 #include <cc_crc.h>
 
-/* CRC-32（IEEE 802.3）反射多项式 0xEDB88320 的 256 项查找表 */
+// CRC-32（IEEE 802.3）反射多项式 0xEDB88320 的 256 项查找表
 static const CCUINT32 _crc32_table_[256] = {
     0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
     0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988, 0x09B64C2B, 0x7EB17CBD, 0xE7B82D07, 0x90BF1D91,
@@ -38,8 +47,10 @@ static const CCUINT32 _crc32_table_[256] = {
 
 CCUINT32 cc_crc32(const void *data, CCUINT64 size, CCUINT32 seed)
 {
-    if (!data && size) return 0;
-    if (!size) return seed;
+    if (!data && size)
+        return 0;
+    if (!size)
+        return seed;
 
     const CCUINT8 *p = (const CCUINT8 *)data;
     // 把「上一段的最终值」还原成内部状态，实现跨块续算

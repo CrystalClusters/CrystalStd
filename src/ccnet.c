@@ -9,6 +9,7 @@
 
 #include "ccnet_internal.h"
 
+// 网络子系统是否已初始化：WSAStartup / WSACleanup 各执行一次的标记
 static CCBOOL _ccnet_net_ready = CCFALSE;
 
 void init_ccnet(void)
@@ -43,6 +44,7 @@ void _ccnet_finish(CCNetStart *start, CCINT32 result)
     if (!start || !start->lock)
         return;
 
+    // 写回 setup 结果并置位 done：创建方在 _ccnet_spawn 中轮询该标记
     cc_lock(start->lock);
     start->result = result;
     start->done = CCTRUE;
@@ -70,6 +72,8 @@ CCINT32 _ccnet_spawn(CCNetStart *start, CCThreadEntry wrapper)
         return CC_NET_ERR_RESOURCE;
     }
 
+    // 等待善后线程完成 setup：done 置位时 result 已由 _ccnet_finish 写入；
+    // 以 1ms 为步长轮询，避免忙等占满 CPU
     for (;;)
     {
         cc_lock(start->lock);
@@ -119,6 +123,8 @@ void _ccnet_tcp_wrapper(void *arg, CCThread idThis)
     if (result == CC_NET_OK && ctx.tcp_entry)
         ctx.tcp_entry(&_ccnet_tcp_ops, &ctx, ctx.user);
 
+    // entry 返回即表示用户不再使用 ctx：socket 由本线程关闭；
+    // start 仅在 accept 路径由堆分配，同样由本线程释放
     _ccnet_ctx_cleanup(&ctx);
 
     if (heap)

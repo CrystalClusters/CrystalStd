@@ -25,7 +25,8 @@
  * ============================================================================
  */
 
-typedef struct CC_AllocatorState {
+typedef struct cc_allocator_state
+{
     CCBOOL                initialized;         // 分配器已初始化
     CCBOOL                protection_enabled;  // 页保护生效中
     CCUINT64              page_size;           // 系统页大小
@@ -83,8 +84,8 @@ static CCUINT64 detect_page_size(void)
     GetSystemInfo(&info);
     return (CCUINT64)info.dwPageSize;
 #else
-    long value = sysconf(_SC_PAGESIZE);
-    return (value > 0) ? (CCUINT64)value : 4096;
+    long page_size = sysconf(_SC_PAGESIZE);   // sysconf 返回 long，属系统 API 类型
+    return (page_size > 0) ? (CCUINT64)page_size : 4096;
 #endif
 }
 
@@ -116,8 +117,10 @@ static CCUINT64 round_up_u64(CCUINT64 value, CCUINT64 align, CCBOOL *ok)
 static CCUINT64 user_data_offset(void)
 {
     CCBOOL ok = CCFALSE;
-    CCUINT64 offset = round_up_u64((CCUINT64)sizeof(CC_UserSegmentHeader),
-                                   (CCUINT64)CC_MEM_ALIGN_MIN, &ok);
+    CCUINT64 offset = round_up_u64(
+        (CCUINT64)sizeof(CC_UserSegmentHeader),
+        (CCUINT64)CC_MEM_ALIGN_MIN, &ok
+    );
     return ok ? offset : (CCUINT64)sizeof(CC_UserSegmentHeader);
 }
 
@@ -701,8 +704,7 @@ static void ccalloc_enter(void)
     {
         if (!unprotect_segment(seg, CC_MEM_META_SEGMENT_SIZE))
         {
-            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT)
-                "[ccalloc] 解除页保护失败，降级为无保护模式\n");
+            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[ccalloc] 解除页保护失败，降级为无保护模式\n");
             return;
         }
         seg = seg_header(seg)->next_seg;
@@ -713,8 +715,7 @@ static void ccalloc_enter(void)
     {
         if (!unprotect_segment(seg, CC_MEM_FREELIST_SEGMENT_SIZE))
         {
-            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT)
-                "[ccalloc] 解除页保护失败，降级为无保护模式\n");
+            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[ccalloc] 解除页保护失败，降级为无保护模式\n");
             return;
         }
         seg = seg_header(seg)->next_seg;
@@ -735,8 +736,7 @@ static void ccalloc_leave(void)
         void *next = seg_header(seg)->next_seg;
         if (!protect_segment(seg, CC_MEM_META_SEGMENT_SIZE))
         {
-            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT)
-                "[ccalloc] 恢复页保护失败，降级为无保护模式\n");
+            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[ccalloc] 恢复页保护失败，降级为无保护模式\n");
             return;
         }
         seg = next;
@@ -748,8 +748,7 @@ static void ccalloc_leave(void)
         void *next = seg_header(seg)->next_seg;
         if (!protect_segment(seg, CC_MEM_FREELIST_SEGMENT_SIZE))
         {
-            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT)
-                "[ccalloc] 恢复页保护失败，降级为无保护模式\n");
+            protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[ccalloc] 恢复页保护失败，降级为无保护模式\n");
             return;
         }
         seg = next;
@@ -763,8 +762,12 @@ static void ccalloc_leave(void)
  */
 
 // 计算 asize 与槽位大小；溢出返回 CCFALSE
-static CCBOOL calc_sizes(CCUINT64 size, CCUINT64 comment_size,
-                         CCUINT64 *asize, CCUINT64 *slot)
+static CCBOOL calc_sizes(
+    CCUINT64 size,
+    CCUINT64 comment_size,
+    CCUINT64 *asize,
+    CCUINT64 *slot
+)
 {
     CCBOOL ok = CCFALSE;
     CCUINT64 align = (CCUINT64)CC_MEM_ALIGN_MIN;
@@ -789,7 +792,7 @@ static CCBOOL calc_sizes(CCUINT64 size, CCUINT64 comment_size,
 // 注释长度（含 NUL）；comment == NULL 时返回 0
 static CCBOOL comment_length(const char *comment, CCUINT64 *out)
 {
-    size_t length;
+    size_t length;   // strlen 返回 size_t，属系统 API 类型
     if (!comment)
     {
         *out = 0;
@@ -813,24 +816,21 @@ static void *alloc_internal(CCUINT64 size, const char *comment)
 
     if (!comment_length(comment, &csize) || !calc_sizes(size, csize, &asize, &slot))
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 分配失败：尺寸计算溢出\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 分配失败：尺寸计算溢出\n");
         return NULL;
     }
 
     node = meta_pool_pop();
     if (!node)
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 分配失败：Meta 段申请失败\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 分配失败：Meta 段申请失败\n");
         return NULL;
     }
 
     if (!user_alloc_slot(slot, &ptr, &seg))
     {
         meta_pool_push(node);
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 分配失败：用户段申请失败\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 分配失败：用户段申请失败\n");
         return NULL;
     }
 
@@ -844,11 +844,9 @@ static void *alloc_internal(CCUINT64 size, const char *comment)
     if (cc_rbt_core_insert(&g_meta_ops, meta_root(), node) != 0)
     {
         if (!free_list_insert(seg, ptr, slot))
-            color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-                "[ccalloc] 警告：回滚时空闲描述符耗尽\n");
+            color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 警告：回滚时空闲描述符耗尽\n");
         meta_pool_push(node);
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 内部错误：元数据键冲突，分配已回滚\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 内部错误：元数据键冲突，分配已回滚\n");
         return NULL;
     }
 
@@ -868,8 +866,7 @@ static void release_meta_block(MetaNode *meta)
 
     if (!calc_sizes(asize, csize, &aligned, &slot))
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 内部错误：释放尺寸异常\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 内部错误：释放尺寸异常\n");
         return;
     }
     CC_UNUSED(aligned);
@@ -878,15 +875,13 @@ static void release_meta_block(MetaNode *meta)
     removed = (MetaNode *)cc_rbt_core_remove(&g_meta_ops, meta_root(), (CCUINTPTR)ptr);
     if (!removed)
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 内部错误：元数据删除失败\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 内部错误：元数据删除失败\n");
         return;
     }
     meta_pool_push(removed);
 
     if (!free_list_insert(seg, ptr, slot))
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 警告：空闲描述符耗尽，区域暂时无法回收\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 警告：空闲描述符耗尽，区域暂时无法回收\n");
 }
 
 static void free_by_ptr(void *ptr)
@@ -895,8 +890,7 @@ static void free_by_ptr(void *ptr)
 
     if (!meta)
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 非法释放：%p 未命中分配记录\n", ptr);
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 非法释放：%p 未命中分配记录\n", ptr);
         return;
     }
 
@@ -921,8 +915,7 @@ static void *realloc_internal(void *old_ptr, CCUINT64 size, const char *comment)
 
     if (!meta)
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 非法调整：%p 未命中分配记录\n", old_ptr);
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 非法调整：%p 未命中分配记录\n", old_ptr);
         return NULL;
     }
 
@@ -943,10 +936,10 @@ static void *realloc_internal(void *old_ptr, CCUINT64 size, const char *comment)
     }
 
     if (!calc_sizes(old_asize, old_csize, &old_aligned, &old_slot) ||
-        !calc_sizes(size, new_csize, &new_asize, &new_slot))
+        !calc_sizes(size, new_csize, &new_asize, &new_slot)
+    )
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 调整失败：尺寸计算溢出\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 调整失败：尺寸计算溢出\n");
         return NULL;
     }
     CC_UNUSED(old_aligned);
@@ -963,17 +956,17 @@ static void *realloc_internal(void *old_ptr, CCUINT64 size, const char *comment)
         }
         else if (old_csize && new_asize != old_asize)
         {
-            memmove((CCUINT8 *)old_ptr + new_asize,
-                    (CCUINT8 *)old_ptr + old_asize,
-                    (size_t)old_csize);
+            memmove(
+                (CCUINT8 *)old_ptr + new_asize,
+                (CCUINT8 *)old_ptr + old_asize,
+                (size_t)old_csize
+            );
         }
 
         if (new_slot < old_slot)
         {
-            if (!free_list_insert(old_seg, (CCUINT8 *)old_ptr + new_slot,
-                                  old_slot - new_slot))
-                color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-                    "[ccalloc] 警告：收缩尾部归还失败（描述符耗尽）\n");
+            if (!free_list_insert(old_seg, (CCUINT8 *)old_ptr + new_slot, old_slot - new_slot))
+                color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 警告：收缩尾部归还失败（描述符耗尽）\n");
         }
         return old_ptr;
     }
@@ -1003,9 +996,10 @@ static void trim_segments(void)
     {
         CC_UserSegmentHeader *next = seg->next_seg;
         FreeListNode *desc = seg->free_head;
-        CCBOOL empty = (desc && !desc->next &&
-                        (void *)((CCUINT8 *)seg + offset) == desc->start &&
-                        desc->size == seg->usable) ? CCTRUE : CCFALSE;
+        CCBOOL empty =
+            (desc && !desc->next &&
+                (void *)((CCUINT8 *)seg + offset) == desc->start &&
+                desc->size == seg->usable) ? CCTRUE : CCFALSE;
 
         // 始终保留至少一个用户段
         if (empty && (prev || next))
@@ -1040,15 +1034,17 @@ static CCINT32 leak_cbk(void *data, void *user)
 
     if (comment)
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] leak: ptr=%p size=%lu comment=\"%s\"\n",
-            node->ptr, (CCUINT64)node->size, comment);
+        color_print(
+            CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] leak: ptr=%p size=%lu comment=\"%s\"\n",
+            node->ptr, (CCUINT64)node->size, comment
+        );
     }
     else
     {
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] leak: ptr=%p size=%lu comment=(无)\n",
-            node->ptr, (CCUINT64)node->size);
+        color_print(
+            CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] leak: ptr=%p size=%lu comment=(无)\n",
+            node->ptr, (CCUINT64)node->size
+        );
     }
 
     (*count)++;
@@ -1093,8 +1089,7 @@ void init_ccalloc(void)
     if (!ok || user_total <= user_offset)
     {
         ccalloc_unlock();
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 初始化失败：用户段尺寸非法\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 初始化失败：用户段尺寸非法\n");
         return;
     }
 
@@ -1129,7 +1124,8 @@ void init_ccalloc(void)
     meta_anchor()->pool_head = NULL;
     memset(meta_anchor()->_pad, 0, sizeof(meta_anchor()->_pad));
 
-    meta_count = (CC_MEM_META_SEGMENT_SIZE > meta_offset)
+    meta_count =
+        (CC_MEM_META_SEGMENT_SIZE > meta_offset)
         ? (CC_MEM_META_SEGMENT_SIZE - meta_offset) / sizeof(MetaNode) : 0;
     if (!meta_count)
         goto FailedtoInitialize;
@@ -1143,7 +1139,8 @@ void init_ccalloc(void)
     free_anchor()->pool_head = NULL;
     memset(free_anchor()->_pad, 0, sizeof(free_anchor()->_pad));
 
-    flist_count = (CC_MEM_FREELIST_SEGMENT_SIZE > flist_offset)
+    flist_count =
+        (CC_MEM_FREELIST_SEGMENT_SIZE > flist_offset)
         ? (CC_MEM_FREELIST_SEGMENT_SIZE - flist_offset) / sizeof(FreeListNode) : 0;
     if (!flist_count)
         goto FailedtoInitialize;
@@ -1179,8 +1176,7 @@ void init_ccalloc(void)
     }
     else
     {
-        protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT)
-            "[ccalloc] 启用页保护失败，降级为无保护模式\n");
+        protection_disable(CC_TEXT_COLOR(CC_YELLOW, CC_DEFAULT) "[ccalloc] 启用页保护失败，降级为无保护模式\n");
     }
 
     ccalloc_unlock();
@@ -1199,8 +1195,10 @@ FailedtoInitialize:
     g_cc.initialized = CCFALSE;
     g_cc.protection_enabled = CCFALSE;
     ccalloc_unlock();
-    color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-        "[ccalloc] 初始化失败：%s\n", fail_reason ? fail_reason : "段布局过小");
+    color_print(
+        CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 初始化失败：%s\n",
+        fail_reason ? fail_reason : "段布局过小"
+    );
 }
 
 CCUINT32 deinit_ccalloc(void)
@@ -1274,8 +1272,7 @@ void *ccalloc(void *old, CCUINT64 size, const char *comment)
     if (!g_cc.initialized)
     {
         ccalloc_unlock();
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 分配器未初始化，请求被拒绝\n");
+        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT) "[ccalloc] 分配器未初始化，请求被拒绝\n");
         return NULL;
     }
 

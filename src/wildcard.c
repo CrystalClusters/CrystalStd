@@ -1,3 +1,12 @@
+/*
+ * @Author: Renascent Adore lizaterop@gmail.com
+ * @Date: 2026-09
+ * @LastEditors: Renascent Adore lizaterop@gmail.com
+ * @LastEditTime: 2026-11
+ * @Description: 通配符匹配。
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
+ */
+
 #include <cc_wildcard.h>
 #include <ccalloc.h>
 #include <string.h>
@@ -9,13 +18,15 @@
  */
 CCBOOL cc_wildcard(const char *pattern, const char *str)
 {
-    if (!pattern || !str) return CCFALSE;
+    if (!pattern || !str)
+        return CCFALSE;
 
     CCUINT32 pattern_len = (CCUINT32)strlen(pattern);
     CCUINT32 str_len = (CCUINT32)strlen(str);
 
     CCUINT8 *dp = (CCUINT8 *)ccalloc(NULL, (CCUINT64)str_len + 1, CC_DBG_REL_TAG("cc_wildcard dp", NULL));
-    if (!dp) return CCFALSE;
+    if (!dp)
+        return CCFALSE;
     memset(dp, 0, (CCUINT64)str_len + 1);
 
     // 空模式匹配空串

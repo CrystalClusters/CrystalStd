@@ -22,10 +22,10 @@
  * ============================================================================
  */
 
-/* 虚拟树节点下标哨兵：下标 0 合法，故不能用 0 表示空 */
+// 虚拟树节点下标哨兵：下标 0 合法，故不能用 0 表示空
 #define CC_FS_NIL 0xFFFFFFFFu
 
-/* 内部来源标记：区分内存创建 / 磁盘投影 / 包投影 */
+// 内部来源标记：区分内存创建 / 磁盘投影 / 包投影
 #define FS_ORIGIN_MEM 0
 #define FS_ORIGIN_DISK 1
 #define FS_ORIGIN_PKG 2
@@ -36,20 +36,20 @@
  * ============================================================================
  */
 
-/* 挂载信息：每个节点持有；real_path == NULL 表示跟随上级 */
+// 挂载信息：每个节点持有；real_path == NULL 表示跟随上级
 typedef struct cc_fs_mount
 {
-    char *real_path;   /* 真实路径（一律 `/`，相对路径已展开为绝对）；NULL = 跟随上级 */
-    CCUINT32 type;     /* CCFsMountType */
-    CCUINT8 origin;    /* FS_ORIGIN_* */
-    CCUINT64 pkg_off;  /* 包内文件：数据起始偏移（绝对） */
-    CCUINT64 pkg_size; /* 包内文件：数据字节数 */
+    char *real_path; // 真实路径（一律 `/`，相对路径已展开为绝对）；NULL = 跟随上级
+    CCUINT32 type; // CCFsMountType
+    CCUINT8 origin; // FS_ORIGIN_*
+    CCUINT64 pkg_off; // 包内文件：数据起始偏移（绝对）
+    CCUINT64 pkg_size; // 包内文件：数据字节数
 } CCFsMount;
 
-/* 前置声明：探针（CCFiles）完整定义见下方 */
+// 前置声明：探针（CCFiles）完整定义见下方
 struct cc_files;
 
-/* 探针回指：节点持有「指向它的探针」双向链表；探针离开 / 节点删除时维护 */
+// 探针回指：节点持有「指向它的探针」双向链表；探针离开 / 节点删除时维护
 typedef struct cc_fs_probe_ref
 {
     struct cc_fs_probe_ref *prev;
@@ -63,41 +63,41 @@ typedef struct cc_fs_probe_ref
  */
 typedef struct cc_fs_node
 {
-    /* 键：文件名（字符串本体独立分配，节点只持指针） */
+    // 键：文件名（字符串本体独立分配，节点只持指针）
     char *name;
-    /* 红黑树字段：一律存下标，CC_FS_NIL 表示空 */
+    // 红黑树字段：一律存下标，CC_FS_NIL 表示空
     CCUINT32 parent;
     CCUINT32 left;
     CCUINT32 right;
     CCBOOL is_red;
-    /* 目录层级与嵌套 */
-    CCUINT32 fs_parent;     /* 父目录节点下标，用于向上导航 */
-    CCUINT32 children_root; /* 目录节点：其子节点红黑树的根下标 */
-    /* 类型与挂载 */
-    CCFsType type;    /* 文件 / 目录 */
-    CCFsMount *mount; /* 挂载信息；NULL 表示跟随上级 */
-    /* 元数据：stat 直接读取，不现算 */
-    CCUINT64 size;  /* 字节数 */
-    CCUINT64 ctime; /* 创建时间（秒级系统时间戳） */
-    CCUINT64 mtime; /* 修改时间（秒级系统时间戳） */
-    CCUINT32 crc32; /* 持久化 CRC：包内取块头、打包 / 解包时记录；无则 0 */
-    /* 指向该节点的探针回指链表头（NULL 表示无探针指向） */
+    // 目录层级与嵌套
+    CCUINT32 fs_parent; // 父目录节点下标，用于向上导航
+    CCUINT32 children_root; // 目录节点：其子节点红黑树的根下标
+    // 类型与挂载
+    CCFsType type; // 文件 / 目录
+    CCFsMount *mount; // 挂载信息；NULL 表示跟随上级
+    // 元数据：stat 直接读取，不现算
+    CCUINT64 size; // 字节数
+    CCUINT64 ctime; // 创建时间（秒级系统时间戳）
+    CCUINT64 mtime; // 修改时间（秒级系统时间戳）
+    CCUINT32 crc32; // 持久化 CRC：包内取块头、打包 / 解包时记录；无则 0
+    // 指向该节点的探针回指链表头（NULL 表示无探针指向）
     CCFsProbeRef *probe_head;
     /* 运行时读写句柄：仅在有探针指向该节点期间存在；最后一次摘除 / 节点被删 /
        物理身份改变（改名 / 跨锚点移动 / 重新挂载）时立即落盘并关闭 */
-    void *fp;           /* FILE*；NULL 表示未打开 */
-    CCUINT64 fp_pos;    /* 句柄当前定位，顺序写时省去 fseek */
-    CCBOOL fp_writable; /* 句柄是否以可写方式打开 */
+    void *fp; // FILE*；NULL 表示未打开
+    CCUINT64 fp_pos; // 句柄当前定位，顺序写时省去 fseek
+    CCBOOL fp_writable; // 句柄是否以可写方式打开
 } CCFsNode;
 
-/* 探针：记录持有者的操作起点（cwd + 当前指向的文件） */
+// 探针：记录持有者的操作起点（cwd + 当前指向的文件）
 struct cc_files
 {
-    _Atomic CCBOOL alive; /* CCFALSE = 该探针已失效（其 cur 指向的节点被删除） */
-    CCUINT32 cwd;         /* 当前工作目录节点下标（默认指向 `/`） */
-    CCUINT32 cur;         /* 当前指向的文件节点下标；CC_FS_NIL 表示未指向文件 */
-    CCUINT32 flags;       /* 内部状态标志 */
-    CCFsProbeRef ref;     /* 自身回指，随 cur 挂入 / 摘除节点链表 */
+    _Atomic CCBOOL alive; // CCFALSE = 该探针已失效（其 cur 指向的节点被删除）
+    CCUINT32 cwd; // 当前工作目录节点下标（默认指向 `/`）
+    CCUINT32 cur; // 当前指向的文件节点下标；CC_FS_NIL 表示未指向文件
+    CCUINT32 flags; // 内部状态标志
+    CCFsProbeRef ref; // 自身回指，随 cur 挂入 / 摘除节点链表
 };
 
 /*
@@ -109,9 +109,9 @@ struct cc_files
 
 typedef struct cc_fs_runtime
 {
-    CCDyn nodes;    /* CCFsNode[] */
-    CCUINT32 root;  /* 根 `/` 节点下标（恒为 0） */
-    char *res_base; /* 可执行程序同层 res 目录（绝对、`/` 分隔） */
+    CCDyn nodes; // CCFsNode[]
+    CCUINT32 root; // 根 `/` 节点下标（恒为 0）
+    char *res_base; // 可执行程序同层 res 目录（绝对、`/` 分隔）
 } CCFsRuntime;
 
 extern CCFsRuntime ccfiles_var;
@@ -229,7 +229,7 @@ CCINT32 fs_load_pkg_into(CCUINT32 anchor_idx, const char *pkg_path);
 
 typedef struct cc_fs_pkg_header
 {
-    CCUINT8 magic[CC_FS_PKG_MAGIC_SIZE]; /* '_CPK' = 5F 43 50 4B */
+    CCUINT8 magic[CC_FS_PKG_MAGIC_SIZE]; // '_CPK' = 5F 43 50 4B
     CCUINT16 version;
     CCUINT16 flags;
     CCUINT32 file_count;
@@ -246,7 +246,7 @@ typedef struct cc_fs_pkg_block
     CCUINT64 offset;
     CCUINT64 size;
     CCUINT32 crc32;
-    CCUINT32 flags; /* bit0 = 目录 */
+    CCUINT32 flags; // bit0 = 目录
 } CCFsPkgBlock;
 
 #endif

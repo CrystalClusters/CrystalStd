@@ -4,11 +4,11 @@
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-11
  * @Description: 用于内部接口流通的头文件。
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
-#ifndef _INCLUDE_CRYSTAL_STD_INNER_H_
-#define _INCLUDE_CRYSTAL_STD_INNER_H_
+#ifndef _SRC_CRYSTAL_STD_INNER_HEADER_H_
+#define _SRC_CRYSTAL_STD_INNER_HEADER_H_
 
 #include <crystal_cluster.h>
 #include <color_print.h>
@@ -19,7 +19,11 @@
 #include <ccthread.h>
 #include <cc_crc.h>
 #include <cc_wildcard.h>
+#include <ccpath.h>
+#include <cc_encoding.h>
+#include <cchost.h>
 #include <ccfiles.h>
+#include <cc_hash.h>
 #include <ccnet.h>
 
 #ifdef CC_WINDOWS
@@ -61,14 +65,14 @@ void deinit_ccnet(void);
 // 总构造、析构函数
 //
 
-void _init_crystal_std_();
-void _deinit_crystal_std_();
+void _init_crystal_std_(void);
+void _deinit_crystal_std_(void);
 
 //
 // 工具函数
 //
 
-void* alloc_segment(CCUINT64 size);
+void *alloc_segment(CCUINT64 size);
 void free_segment(void *ptr, CCUINT64 size);
 
 // 页保护：成功返回 CCTRUE，失败返回 CCFALSE

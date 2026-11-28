@@ -3,7 +3,7 @@
  * @Date: 2026-08
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-11
- * @Description: 
+ * @Description:
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 #include "crystal_std_inner_header.h"
@@ -107,7 +107,7 @@ void init_console(void)
     if (isatty(STDOUT_FILENO))
     {
         const char *term = getenv("TERM");
-        if(term && strcmp(term,"dumb")!=0)
+        if (term && strcmp(term, "dumb") != 0)
             ansi_enabled = CCTRUE;
     }
 #endif
@@ -156,7 +156,7 @@ static inline void buffer_append_chars(
     }
 }
 
-/* flush 输出缓冲中尚未写入的字符 */
+// flush 输出缓冲中尚未写入的字符
 static inline void flush_buffer(
     char *out_buffer,
     CCUINT32 *p_buffer_counter,
@@ -193,13 +193,13 @@ static void write_ansi_color(CCUINT32 fg, CCUINT32 bg)
 {
     CCUINT32 bg_len;
 
-    if (fg>=16 || bg>=16)
+    if (fg >= 16 || bg >= 16)
         return;
 
     fwrite("\033[", 2, 1, stdout);
-    fwrite(fg_ansi[fg], 2, 1, stdout); /* FG 始终 2 字符，0→"39" */
+    fwrite(fg_ansi[fg], 2, 1, stdout); // FG 始终 2 字符，0→"39"
     fwrite(";", 1, 1, stdout);
-    bg_len = (bg >= 8) ? 3 : 2; /* "49"/"41"=2 / "100"=3 */
+    bg_len = (bg >= 8) ? 3 : 2; // "49"/"41"=2 / "100"=3
     fwrite(bg_ansi[bg], bg_len, 1, stdout);
     fwrite("m", 1, 1, stdout);
 }
@@ -251,7 +251,7 @@ static void set_color(
     else
         write_win32_color(fg, bg);
 #else
-    /* 非 Windows 且 VT 不可用（理论上不会发生）：静默跳过 */
+    // 非 Windows 且 VT 不可用（理论上不会发生）：静默跳过
     (void)fg;
     (void)bg;
 #endif
@@ -346,7 +346,7 @@ static inline CCUINT32 fmt_color(
     CCUINT32 *p_cur_bg
 )
 {
-    /* 格式串可能在 '_' 后直接结束；先做短路检查，避免越界读取 */
+    // 格式串可能在 '_' 后直接结束；先做短路检查，避免越界读取
     if (ctl_body[0] == '\0' || ctl_body[1] == '\0')
         return fmt_char(p_args, out_buffer, p_buffer_counter, p_counter);
 
@@ -367,12 +367,10 @@ static inline CCUINT32 fmt_color(
     // 更新当前颜色状态，供跨行重新应用
     *p_cur_fg = fg;
     *p_cur_bg = bg;
-    return 5; //跳过 %c_ + 2位hex
+    return 5; // 跳过 %c_ + 2位hex
 }
 
-/*
- * 将无符号十进制整数逆序生成后正序写入输出缓冲（支持至 CCUINT64 全宽）。
- */
+// 将无符号十进制整数逆序生成后正序写入输出缓冲（支持至 CCUINT64 全宽）。
 static inline void append_decimal(
     CCUINT64 value,
     char *out_buffer,
@@ -407,10 +405,8 @@ static inline void append_decimal(
     }
 }
 
-/*
- * 将无符号整数的十六进制数字逆序生成后正序写入输出缓冲（支持至 CCUINT64 全宽）。
- * digits 指定输出位数（32 位=8，64 位=16），高位以 '0' 补齐。不含 "0x" 前缀。
- */
+// 将无符号整数的十六进制数字逆序生成后正序写入输出缓冲（支持至 CCUINT64 全宽）。
+// digits 指定输出位数（32 位=8，64 位=16），高位以 '0' 补齐。不含 "0x" 前缀。
 static inline void append_hex(
     CCUINT64 value,
     CCUINT32 digits,
@@ -454,14 +450,12 @@ static inline CCUINT32 fmt_pointer(
     buffer_append_chars("0x", 2, out_buffer, p_buffer_counter, p_counter);
     // 位宽自适应：32 位=8，64 位=16，以此类推
     append_hex((CCUINT64)p, (CCUINT32)PTR_HEX_DIGITS, out_buffer, p_buffer_counter, p_counter);
-    #undef PTR_HEX_DIGITS
+#undef PTR_HEX_DIGITS
     return 2;
 }
 
-/*
- * 核心：将已去除符号、非 NaN/Inf 的非负 double 按精度格式化为十进制小数。
- * 供 fmt_float_core / fmt_double_core 复用（%f / %lf / %.Nf 共用）。
- */
+// 核心：将已去除符号、非 NaN/Inf 的非负 double 按精度格式化为十进制小数。
+// 供 fmt_float_core / fmt_double_core 复用（%f / %lf / %.Nf 共用）。
 static inline void append_double_fraction(
     double value,
     CCUINT32 precision,
@@ -510,10 +504,8 @@ static inline void append_double_fraction(
     }
 }
 
-/*
- * 10^d 紧凑查表（d ∈ [0,308]），分解为个位段与十位段：10^d = tens[d/10] * ones[d%10]。
- * 每项单独正确舍入，避免运行时连乘累积误差；供两个科学计数法函数共享（类型无关数据）。
- */
+// 10^d 紧凑查表（d ∈ [0,308]），分解为个位段与十位段：10^d = tens[d/10] * ones[d%10]。
+// 每项单独正确舍入，避免运行时连乘累积误差；供两个科学计数法函数共享（类型无关数据）。
 static const double cc_pow10_ones[10] = {
     1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9
 };
@@ -528,10 +520,8 @@ static inline double cc_pow10_lookup(CCINT32 d)
     return cc_pow10_tens[d / 10] * cc_pow10_ones[d % 10];
 }
 
-/*
- * 科学计数法尾段（类型无关）：输出已归一化到 [1,10) 的尾数与 "e±d"。
- * 供 append_scientific_double / append_scientific_float 复用。
- */
+// 科学计数法尾段（类型无关）：输出已归一化到 [1,10) 的尾数与 "e±d"。
+// 供 append_scientific_double / append_scientific_float 复用。
 static inline void append_scientific_tail(
     double scaled,
     CCINT32 d,
@@ -553,10 +543,8 @@ static inline void append_scientific_tail(
     append_decimal((CCUINT64)d, out_buffer, p_buffer_counter, p_counter);
 }
 
-/*
- * %lf 大数科学计数法（解析 binary64：11 位阶码偏置 1023、52 位尾数）。
- * 仅处理非负、有限、且 >= 2^64 的值（符号/Inf/NaN 已在外层处理）。
- */
+// %lf 大数科学计数法（解析 binary64：11 位阶码偏置 1023、52 位尾数）。
+// 仅处理非负、有限、且 >= 2^64 的值（符号/Inf/NaN 已在外层处理）。
 static void append_scientific_double(
     double value,
     CCUINT32 precision,
@@ -573,16 +561,22 @@ static void append_scientific_double(
     CCINT32 d = (CCINT32)((double)bin_exp * 0.30102999566398119521);
     // 归一化到 [1,10)（查表 10^d，校正 ±1）
     double scaled = value / cc_pow10_lookup(d);
-    if (scaled >= 10.0) { scaled *= 0.1; d++; }
-    else if (scaled < 1.0) { scaled *= 10.0; d--; }
+    if (scaled >= 10.0)
+    {
+        scaled *= 0.1;
+        d++;
+    }
+    else if (scaled < 1.0)
+    {
+        scaled *= 10.0;
+        d--;
+    }
 
     append_scientific_tail(scaled, d, precision, out_buffer, p_buffer_counter, p_counter);
 }
 
-/*
- * %f 大数科学计数法（解析 binary32：8 位阶码偏置 127、23 位尾数）。
- * 仅处理非负、有限、且 >= 2^64 的值（符号/Inf/NaN 已在外层处理）。
- */
+// %f 大数科学计数法（解析 binary32：8 位阶码偏置 127、23 位尾数）。
+// 仅处理非负、有限、且 >= 2^64 的值（符号/Inf/NaN 已在外层处理）。
 static void append_scientific_float(
     float value,
     CCUINT32 precision,
@@ -599,13 +593,21 @@ static void append_scientific_float(
     CCINT32 d = (CCINT32)((double)bin_exp * 0.30102999566398119521);
     // 归一化到 [1,10)（查表 10^d，校正 ±1）
     double scaled = (double)value / cc_pow10_lookup(d);
-    if (scaled >= 10.0) { scaled *= 0.1; d++; }
-    else if (scaled < 1.0) { scaled *= 10.0; d--; }
+    if (scaled >= 10.0)
+    {
+        scaled *= 0.1;
+        d++;
+    }
+    else if (scaled < 1.0)
+    {
+        scaled *= 10.0;
+        d--;
+    }
 
     append_scientific_tail(scaled, d, precision, out_buffer, p_buffer_counter, p_counter);
 }
 
-/* %lf 内核：double 全精度路径 */
+// %lf 内核：double 全精度路径
 static inline void fmt_double_core(
     double value,
     CCUINT32 precision,
@@ -649,7 +651,7 @@ static inline void fmt_double_core(
     append_double_fraction(value, precision, out_buffer, p_buffer_counter, p_counter);
 }
 
-/* %f 内核：float 路径（float 尾数 24 位，有效数字约 7 位，精度上限 9） */
+// %f 内核：float 路径（float 尾数 24 位，有效数字约 7 位，精度上限 9）
 static inline void fmt_float_core(
     float value,
     CCUINT32 precision,
@@ -697,12 +699,10 @@ static inline void fmt_float_core(
     append_double_fraction((double)value, precision, out_buffer, p_buffer_counter, p_counter);
 }
 
-/*
- * 标准格式说明符子集：%[flags][width][.precision][length]conv
- * 支持 -、0、+、空格、# 标志，十进制宽度与精度，长度 l / ll / z / j / t，
- * 转换 d i u o x X c s p f F %。
- * 颜色控制 %c_XY 在进入本解析前单独处理。
- */
+// 标准格式说明符子集：%[flags][width][.precision][length]conv
+// 支持 -、0、+、空格、# 标志，十进制宽度与精度，长度 l / ll / z / j / t，
+// 转换 d i u o x X c s p f F %。
+// 颜色控制 %c_XY 在进入本解析前单独处理。
 typedef struct cc_fmt_spec
 {
     CCBOOL left;
@@ -713,7 +713,7 @@ typedef struct cc_fmt_spec
     CCUINT32 width;
     CCBOOL has_precision;
     CCUINT32 precision;
-    CCUINT32 length; /* 0=int, 1=l, 2=ll/j/t, 3=z */
+    CCUINT32 length; // 0=int, 1=l, 2=ll/j/t, 3=z
     char conv;
     CCUINT32 consumed;
 } CCFmtSpec;
@@ -725,20 +725,26 @@ static CCBOOL fmt_parse_spec(const char *p, CCFmtSpec *s)
 
     memset(s, 0, sizeof(*s));
 
-    /* flags */
+    // flags
     for (;;)
     {
         c = p[i];
-        if (c == '-') s->left = CCTRUE;
-        else if (c == '0') s->zero = CCTRUE;
-        else if (c == '+') s->plus = CCTRUE;
-        else if (c == ' ') s->space = CCTRUE;
-        else if (c == '#') s->alt = CCTRUE;
-        else break;
+        if (c == '-')
+            s->left = CCTRUE;
+        else if (c == '0')
+            s->zero = CCTRUE;
+        else if (c == '+')
+            s->plus = CCTRUE;
+        else if (c == ' ')
+            s->space = CCTRUE;
+        else if (c == '#')
+            s->alt = CCTRUE;
+        else
+            break;
         i++;
     }
 
-    /* width */
+    // width
     while (p[i] >= '0' && p[i] <= '9')
     {
         s->width = s->width * 10u + (CCUINT32)(p[i] - '0');
@@ -747,7 +753,7 @@ static CCBOOL fmt_parse_spec(const char *p, CCFmtSpec *s)
         i++;
     }
 
-    /* precision */
+    // precision
     if (p[i] == '.')
     {
         s->has_precision = CCTRUE;
@@ -761,11 +767,12 @@ static CCBOOL fmt_parse_spec(const char *p, CCFmtSpec *s)
         }
     }
 
-    /* length */
+    // length
     if (p[i] == 'h')
     {
         i++;
-        if (p[i] == 'h') i++;
+        if (p[i] == 'h')
+            i++;
         s->length = 0;
     }
     else if (p[i] == 'l')
@@ -796,15 +803,15 @@ static CCBOOL fmt_parse_spec(const char *p, CCFmtSpec *s)
     if (c == '\0')
         return CCFALSE;
     if (!(c == 'd' || c == 'i' || c == 'u' || c == 'o' || c == 'x' ||
-          c == 'X' || c == 'c' || c == 's' || c == 'p' || c == 'f' ||
-          c == 'F' || c == '%'))
+        c == 'X' || c == 'c' || c == 's' || c == 'p' || c == 'f' ||
+        c == 'F' || c == '%'))
         return CCFALSE;
     s->conv = c;
     s->consumed = i + 1u;
     return CCTRUE;
 }
 
-/* 输出 n 个相同字符（用于宽度填充） */
+// 输出 n 个相同字符（用于宽度填充）
 static void fmt_out_repeat(
     char c,
     CCUINT32 n,
@@ -825,7 +832,7 @@ static void fmt_out_repeat(
     }
 }
 
-/* CCUINT64 -> 十进制字符串，返回长度 */
+// CCUINT64 -> 十进制字符串，返回长度
 static CCUINT32 u64_to_dec_str(CCUINT64 value, char *out)
 {
     char tmp[21];
@@ -846,7 +853,7 @@ static CCUINT32 u64_to_dec_str(CCUINT64 value, char *out)
     return n;
 }
 
-/* CCUINT64 -> 2/8/16 进制字符串，返回长度 */
+// CCUINT64 -> 2/8/16 进制字符串，返回长度
 static CCUINT32 u64_to_base_str(CCUINT64 value, CCUINT32 base, CCBOOL upper, char *out)
 {
     const char *digits = upper ? "0123456789ABCDEF" : "0123456789abcdef";
@@ -868,7 +875,7 @@ static CCUINT32 u64_to_base_str(CCUINT64 value, CCUINT32 base, CCBOOL upper, cha
     return n;
 }
 
-/* 有符号 / 无符号整数，带宽度、对齐、符号、0 填充、精度与进制前缀 */
+// 有符号 / 无符号整数，带宽度、对齐、符号、0 填充、精度与进制前缀
 static void fmt_int_spec(
     CCFmtSpec *s,
     va_list *p_args,
@@ -896,40 +903,40 @@ static void fmt_int_spec(
         switch (s->length)
         {
         case 0:
-        {
-            int v = va_arg(*p_args, int);
-            if (v < 0)
             {
-                neg = CCTRUE;
-                value = (CCUINT64)(-(CCINT64)v);
+                int v = va_arg(*p_args, int);
+                if (v < 0)
+                {
+                    neg = CCTRUE;
+                    value = (CCUINT64)(-(CCINT64)v);
+                }
+                else
+                {
+                    value = (CCUINT64)(CCUINT32)v;
+                }
+                break;
             }
-            else
-            {
-                value = (CCUINT64)(CCUINT32)v;
-            }
-            break;
-        }
         case 1:
         case 2:
-        {
-            CCINT64 v = va_arg(*p_args, CCINT64);
-            if (v < 0)
             {
-                neg = CCTRUE;
-                value = (CCUINT64)(-(CCUINT64)v);
+                CCINT64 v = va_arg(*p_args, CCINT64);
+                if (v < 0)
+                {
+                    neg = CCTRUE;
+                    value = (CCUINT64)(-(CCUINT64)v);
+                }
+                else
+                {
+                    value = (CCUINT64)v;
+                }
+                break;
             }
-            else
-            {
-                value = (CCUINT64)v;
-            }
-            break;
-        }
         default:
-        {
-            size_t v = va_arg(*p_args, size_t);
-            value = (CCUINT64)v;
-            break;
-        }
+            {
+                size_t v = va_arg(*p_args, size_t);
+                value = (CCUINT64)v;
+                break;
+            }
         }
     }
     else
@@ -962,7 +969,7 @@ static void fmt_int_spec(
         dn = u64_to_dec_str(value, digits);
     }
 
-    /* 精度为 0 且值为 0：不输出数字（标准语义） */
+    // 精度为 0 且值为 0：不输出数字（标准语义）
     if (s->has_precision && s->precision == 0 && value == 0)
         dn = 0;
     if (s->has_precision && dn < s->precision)
@@ -1022,7 +1029,7 @@ static void fmt_int_spec(
     }
 }
 
-/* 字符串，带宽度、左对齐与精度截断；颜色状态下换行会重置并重应用颜色 */
+// 字符串，带宽度、左对齐与精度截断；颜色状态下换行会重置并重应用颜色
 static void fmt_string_spec(
     CCFmtSpec *s,
     va_list *p_args,
@@ -1059,7 +1066,7 @@ static void fmt_string_spec(
         fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
 }
 
-/* 字符，带宽度与左对齐 */
+// 字符，带宽度与左对齐
 static void fmt_char_spec(
     CCFmtSpec *s,
     va_list *p_args,
@@ -1077,7 +1084,7 @@ static void fmt_char_spec(
         fmt_out_repeat(' ', pad, out_buffer, p_buffer_counter, p_counter);
 }
 
-/* 浮点：沿用既有 float/double 内核；宽度暂不参与布局 */
+// 浮点：沿用既有 float/double 内核；宽度暂不参与布局
 static void fmt_float_spec(
     CCFmtSpec *s,
     va_list *p_args,
@@ -1113,10 +1120,13 @@ static inline CCBOOL try_match_control(
     const char *p = *current;
     CCFmtSpec spec;
 
-    /* 颜色控制：%c_XY；非法 hex 由 fmt_color 回退为普通 %c */
+    // 颜色控制：%c_XY；非法 hex 由 fmt_color 回退为普通 %c
     if (p[1] == 'c' && p[2] == '_')
     {
-        CCUINT32 step = fmt_color(p + 3, p_args, out_buffer, p_buffer_counter, p_counter, p_color_modified, p_cur_fg, p_cur_bg);
+        CCUINT32 step = fmt_color(
+            p + 3, p_args, out_buffer, p_buffer_counter, p_counter,
+            p_color_modified, p_cur_fg, p_cur_bg
+        );
         *current += step;
         return CCTRUE;
     }
@@ -1124,7 +1134,7 @@ static inline CCBOOL try_match_control(
     if (!fmt_parse_spec(p, &spec))
         return CCFALSE;
 
-    /* 兼容旧语义：无标志/宽度/精度的 %x、%lx 仍输出 0x + 固定位宽 */
+    // 兼容旧语义：无标志/宽度/精度的 %x、%lx 仍输出 0x + 固定位宽
     if (spec.conv == 'x' && !spec.alt && !spec.left && !spec.zero &&
         spec.width == 0 && !spec.has_precision &&
         (spec.length == 0 || spec.length == 1))
@@ -1196,7 +1206,11 @@ CCINT32 color_print(const char *pattern, ...)
     while (*current != '\0')
     {
         // 控制符匹配
-        if (*current == '%' && try_match_control(&current, &args, out_buffer, &buffer_counter, &counter, &color_modified, &cur_fg, &cur_bg))
+        if (*current == '%' && try_match_control(
+                &current, &args, out_buffer, &buffer_counter, &counter,
+                &color_modified, &cur_fg, &cur_bg
+            )
+        )
             continue;
         // 遇到换行：flush + 重置背景色（防行尾填充）→ 输出 \n → 重新应用当前颜色（内联函数内含计数）
         if (*current == '\n' && (cur_fg != 0 || cur_bg != 0))

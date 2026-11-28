@@ -3,14 +3,14 @@
  * @Date: 2026-08
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-09
- * @Description: 
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * @Description:
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #ifndef _INCLUDE_COLOR_PRINT_H_
 #define _INCLUDE_COLOR_PRINT_H_
 
-#include "crystal_cluster.h"
+#include <crystal_cluster.h>
 
 /* ============================================================
  * 颜色代码（十六进制）
@@ -37,7 +37,7 @@
 #define CC_BCYAN      "E"
 #define CC_BWHITE     "F"
 
-/* 构造颜色控制符：CC_TEXT_COLOR(前景, 背景) → "%c_XY"（字符串拼接） */
+// 构造颜色控制符：CC_TEXT_COLOR(前景, 背景) → "%c_XY"（字符串拼接）
 #define CC_TEXT_COLOR(fg, bg)  "%c_" fg bg
 
 /**
@@ -50,11 +50,11 @@
  * color_print(CC_TEXT_COLOR(CC_GREEN, CC_DEFAULT) "OK\n");   // 绿字 + 默认背景
  * color_print(CC_TEXT_COLOR(CC_RED, CC_GRAY) "错误\n");      // 红字灰底
  * color_print("%c_20绿色文本\n");
- * 
+ *
  * CC_TEXT_COLOR 中某一项填 CC_DEFAULT 表示该项单独复位为默认色，
  * 两项均填 CC_DEFAULT（%c_00）即前景、背景同时复位为默认。
  * 调用结束后自动恢复终端默认颜色（仅当颜色曾被修改时）。
  */
-CCINT32 color_print(const char* pattern, ...);
+CCINT32 color_print(const char *pattern, ...);
 
 #endif

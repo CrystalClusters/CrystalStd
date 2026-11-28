@@ -6,7 +6,7 @@
  * @Description: 红黑树内核实现。仅负责红黑树形态逻辑，
  *               所有节点访问（结构、颜色、旋转、比较、拷贝）均通过 CC_RbtOps 提供的
  *               接口完成，内核不感知具体节点结构，以实现高度解耦。
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #include "crystal_std_inner_header.h"
@@ -18,19 +18,19 @@
  */
 
 // 取父节点（节点为空返回 NULL）
-static inline void* node_parent(CC_RbtOps *ops, void *node)
+static inline void *node_parent(CC_RbtOps *ops, void *node)
 {
     return node ? ops->get_node(ops->user, node, CC_RBT_REL_PARENT) : NULL;
 }
 
 // 取左子节点
-static inline void* node_left(CC_RbtOps *ops, void *node)
+static inline void *node_left(CC_RbtOps *ops, void *node)
 {
     return node ? ops->get_node(ops->user, node, CC_RBT_REL_LEFT) : NULL;
 }
 
 // 取右子节点
-static inline void* node_right(CC_RbtOps *ops, void *node)
+static inline void *node_right(CC_RbtOps *ops, void *node)
 {
     return node ? ops->get_node(ops->user, node, CC_RBT_REL_RIGHT) : NULL;
 }
@@ -116,7 +116,7 @@ static inline CCINT32 inorder_iter(CC_RbtOps *ops, void *root, void *user, CCDat
 }
 
 // 按 key 做二叉搜索
-static inline void* find_node(CC_RbtOps *ops, void *root, CCUINTPTR key)
+static inline void *find_node(CC_RbtOps *ops, void *root, CCUINTPTR key)
 {
     void *cursor = root;
     while (cursor)
@@ -354,13 +354,11 @@ CCINT32 cc_rbt_core_insert(CC_RbtOps *ops, void *root, void *node)
     return 0;
 }
 
-/*
- * 当被删节点拥有两个子节点时，经 find_instead 取得替换节点，
- * 用 copy_node 将其数据拷入被删节点，再物理摘除替换节点。
- * 返回值为「物理上被摘除的节点」，调用方应对其进行回收；
- * 未找到对应 key 时返回 NULL。
- */
-void* cc_rbt_core_remove(CC_RbtOps *ops, void *root, CCUINTPTR key)
+// 当被删节点拥有两个子节点时，经 find_instead 取得替换节点，
+// 用 copy_node 将其数据拷入被删节点，再物理摘除替换节点。
+// 返回值为「物理上被摘除的节点」，调用方应对其进行回收；
+// 未找到对应 key 时返回 NULL。
+void *cc_rbt_core_remove(CC_RbtOps *ops, void *root, CCUINTPTR key)
 {
     if (!ops)
         return NULL;
@@ -399,7 +397,7 @@ void* cc_rbt_core_remove(CC_RbtOps *ops, void *root, CCUINTPTR key)
     return y;
 }
 
-void* cc_rbt_core_get(CC_RbtOps *ops, void *root, CCUINTPTR key)
+void *cc_rbt_core_get(CC_RbtOps *ops, void *root, CCUINTPTR key)
 {
     if (!ops)
         return NULL;

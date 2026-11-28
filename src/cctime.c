@@ -37,7 +37,7 @@ void deinit_cctime(void)
 }
 
 // 获取高精度相对时间戳
-double cctime()
+double cctime(void)
 {
 #ifdef CC_WINDOWS
     QueryPerformanceCounter(&collection.count);
@@ -55,7 +55,7 @@ void ccsleep(CCUINT32 us)
     LARGE_INTEGER start, end;
     QueryPerformanceCounter(&start);
     CCUINT64 target_ticks = (us * collection.frequency.QuadPart) / 1000000;
-    while (TRUE)
+    while (CCTRUE)
     {
         QueryPerformanceCounter(&end);
         CCUINT64 elapsed = end.QuadPart - start.QuadPart;
@@ -95,7 +95,7 @@ void ccsleep(CCUINT32 us)
 }
 
 // 日期获取
-CCDate ccdate()
+CCDate ccdate(void)
 {
     CCDate date;
 #ifdef CC_WINDOWS

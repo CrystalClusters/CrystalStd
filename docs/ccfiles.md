@@ -3,7 +3,7 @@
 统一文件管理内核。提供一套虚拟文件空间，用于检索、映射与操作文件：既可将磁盘中的真实文件 / 目录 / 资源包挂载到虚拟空间，也可在虚拟空间中创建文件并**直接写入磁盘**。目标是模仿 shell 的文件操作，把 `ls`、`cp`、`mv`、`rm`、`find` 等能力内化到库中（相当于库内置的跨平台 shell）。
 
 > 头文件为 `include/ccfiles.h`，使用 `#include <ccfiles.h>`。
-> 公开头文件只暴露枚举、`CCFsStat` / `CCFsEntry` 输出结构、不透明探针句柄 `CCFiles` 与函数原型；节点、挂载、探针等内部结构定义于 `src/ccfiles_internal.h`，**不属于公开契约**，字段随时可能调整。
+> 公开头文件只暴露枚举、`CCFsStat` / `CCFsEntry` / `CCFsFindEntry` 输出结构、不透明探针句柄 `CCFiles` 与函数原型；节点、挂载、探针等内部结构定义于 `src/ccfiles_internal.h`，**不属于公开契约**，字段随时可能调整。
 
 ---
 
@@ -19,7 +19,8 @@
 错误码（可扩展，按需增删，用于快捷区分错误类型）：
 
 ```C
-typedef enum cc_fs_result {
+typedef enum cc_fs_result
+{
     CC_FS_OK           =  0,   /* 成功 */
     CC_FS_ERR_PARAM    = -1,   /* 参数非法（空指针 / type 非法 / 缓冲区不足） */
     CC_FS_ERR_NOENT    = -2,   /* 路径 / 节点不存在 */
@@ -32,6 +33,7 @@ typedef enum cc_fs_result {
     CC_FS_ERR_NOTEMPTY = -9,   /* 目录非空 */
     CC_FS_ERR_IO       = -10,  /* 底层 IO 失败 */
     CC_FS_ERR_NOTMOUNT = -11,  /* 不是挂载锚点（unmount） */
+    CC_FS_ERR_NOPHYS   = -12,  /* 节点没有宿主实体（纯内存 / 包内投影） */
 } CCFsResult;
 ```
 
@@ -84,7 +86,8 @@ CCINT32 ccfiles_getcur(CCFiles *fs, char *buf, CCUINT32 size);  /* 取当前指�
 ### 1.4 挂载与刷新
 
 ```C
-typedef enum cc_fs_mount_type {
+typedef enum cc_fs_mount_type
+{
     CC_FS_MOUNT_DIR  = 1,   /* 挂载真实目录，递归生成子树 */
     CC_FS_MOUNT_PKG  = 2,   /* 挂载只读资源包 */
     CC_FS_MOUNT_FILE = 3,   /* 挂载单个真实文件 */
@@ -157,7 +160,8 @@ CCINT32  ccfiles_stat(CCFiles *fs, const char *v_path, CCFsStat *out);          
 `CCFsStat`：
 
 ```C
-typedef struct cc_fs_stat {
+typedef struct cc_fs_stat
+{
     CCFsType  type;      /* 文件 / 目录 */
     CCUINT64  size;      /* 字节数 */
     CCUINT64  ctime;     /* 创建时间（秒级系统时间戳）；无则 0 */
@@ -171,7 +175,8 @@ typedef struct cc_fs_stat {
 
 ```C
 /* 检索结果条目：仅在回调执行期间有效 */
-typedef struct cc_fs_entry {
+typedef struct cc_fs_entry
+{
     const char *name;      /* 文件 / 目录名（不含路径） */
     CCFsType    type;      /* 文件 / 目录 */
     CCUINT64    size;      /* 字节数 */
@@ -181,28 +186,62 @@ typedef struct cc_fs_entry {
     CCUINT32    crc32;     /* 持久化 CRC；无则 0 */
 } CCFsEntry;
 
-CCINT32 ccfiles_list(CCFiles *fs, const char *v_path, CCDataCallback cbk, void *user);                   /* 遍历目录 */
-CCINT32 ccfiles_find(CCFiles *fs, const char *v_path, const char *pattern, CCDataCallback cbk, void *user); /* 通配符检索 */
+/* find_ex 结果条目：仅在回调执行期间有效 */
+typedef struct cc_fs_find_entry
+{
+    const char *name;      /* 文件 / 目录名（不含路径） */
+    const char *path;      /* 相对 v_path 的路径，`/` 分隔 */
+    CCFsType    type;      /* 文件 / 目录 */
+    CCUINT64    size;      /* 字节数 */
+    CCUINT64    mtime;     /* 修改时间（秒级系统时间戳）；无则 0 */
+} CCFsFindEntry;
+
+CCINT32 ccfiles_list(CCFiles *fs, const char *v_path, CCDataCallback cbk, void *user);
+CCINT32 ccfiles_find(CCFiles *fs, const char *v_path, const char *pattern, CCDataCallback cbk, void *user);
+CCINT32 ccfiles_find_ex(CCFiles *fs, const char *v_path, const char *pattern,
+                        CCUINT32 max_depth, CCDataCallback cbk, void *user);
+CCINT32 ccfiles_realpath(CCFiles *fs, const char *v_path, char **out_path);
 ```
 
 **参数含义：**
-- `v_path`：`list` 的目标目录；`find` 的搜索根（在其子树内递归）。
-- `cbk`：结果回调 `CCDataCallback`；`data` 传 `CCFsEntry*`（名字 + 类型 / 大小 / 时间 / 只读标记 / CRC 的公开快照），`user` 为用户上下文。
-- `pattern`：`find` 的通配符，仅匹配 basename（不含 `/`），支持 `*` / `?`。
+- `v_path`：`list` 的目标目录；`find` / `find_ex` 的搜索根（在其子树内递归）；`realpath` 的待查询节点。
+- `cbk`：结果回调 `CCDataCallback`；`data` 传 `CCFsEntry*` 或 `CCFsFindEntry*`，`user` 为用户上下文。
+- `pattern`：`find` / `find_ex` 的通配符，仅匹配 basename（不含 `/`），支持 `*` / `?`。
+- `max_depth`：`find_ex` 的深度预算，`0` 表示不限制。
+
+**深度语义（`ccfiles_find_ex`）：**
+
+以 `v_path` 为深度 0：
+
+| `max_depth` | 上报范围 | 是否进入子目录 |
+|---|---|---|
+| `0` | 不限 | 是 |
+| `1` | 直接子项（深度 1） | 否 |
+| `2` | 深度 1、2 | 进入深度 1 的目录，不进入深度 2 |
+| `n` | 深度 ≤ n | 进入深度 < n 的目录 |
+
+- `path` 相对 `v_path`，不含搜索根名，不含前导 `/`。
+- 目录命中同样回调。
+- 回调返回非 `0` 时立即停止，并原样返回该值。
+- 遍历顺序与 `ccfiles_find` 一致，不承诺按 `path` 全局排序。
 
 **返回值：**
 
 - **ccfiles_list：**
 遍历完毕返回 `CC_FS_OK`；回调返回非 `0` 时中断并透传该值；`CC_FS_ERR_PARAM`；`CC_FS_ERR_NOENT`；`CC_FS_ERR_NOTDIR`。
-- **ccfiles_find：**
-遍历完毕返回 `CC_FS_OK`；回调返回非 `0` 时中断并透传该值；`CC_FS_ERR_PARAM`；`CC_FS_ERR_NOENT`。
+- **ccfiles_find / ccfiles_find_ex：**
+遍历完毕返回 `CC_FS_OK`；回调返回非 `0` 时中断并透传该值；`CC_FS_ERR_PARAM`；`CC_FS_ERR_NOENT`；`CC_FS_ERR_NOTDIR`。
+- **ccfiles_realpath：**
+成功返回 `CC_FS_OK`，`*out_path` 为 ccalloc 分配的宿主绝对路径；`CC_FS_ERR_PARAM`；`CC_FS_ERR_NOENT`；`CC_FS_ERR_NOPHYS`；`CC_FS_ERR_NOSPACE`。
 
 **注意事项：**
-- `CCDataCallback` 定义于 `crystal_cluster.h`（`typedef CCINT32(*CCDataCallback)(void *data, void *user);`），`data` 指向 `CCFsEntry`。
+- `CCDataCallback` 定义于 `crystal_cluster.h`（`typedef CCINT32(*CCDataCallback)(void *data, void *user);`）。
 - `list` 按字典序（红黑树中序）回调。
 - `find` 递归遍历整棵子树；`*` 不跨目录，跨目录递归由 `find` 遍历完成。
-- `CCFsEntry` 是栈上快照，**仅在回调执行期间有效**；`name` 指向节点内部字符串，回调返回后同样失效。需要保留名字请立即拷贝。
+- `CCFsEntry` / `CCFsFindEntry` 是栈上快照，**仅在回调执行期间有效**；`name` 指向节点内部字符串，`path` 指向内部复用缓冲，回调返回后同样失效。需要保留请立即拷贝。
 - 回调内**不得对树做结构性修改**（创建 / 删除 / 移动等），否则遍历状态失效；该约束由调用方自行保证。
+- `ccfiles_realpath` 返回最近挂载锚点的宿主路径加相对路径；包挂载锚点返回 `.pkg` 文件路径，包内子树与纯内存节点返回 `CC_FS_ERR_NOPHYS`。
+- `ccfiles_realpath` 不检查宿主文件当前是否存在；VFS 状态可能落后于磁盘。
 
 ### 1.7 shell 式文件操作
 
@@ -271,9 +310,11 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path); 
 
 - 检索发生在虚拟树内（含内存虚拟文件与包内文件），不直接扫描磁盘。
 - 通配符匹配复用基础组件 `cc_wildcard`（见 `wildcard.md`）：支持 `*`（任意长度）与 `?`（单字符），逐字节比较，DP 滚动数组实现。
-- `*` 不跨目录；跨目录递归由 `find` 遍历整棵子树完成。
+- `*` 不跨目录；跨目录递归由 `find` / `find_ex` 遍历子树完成。
 - `pattern` 仅作用于单个文件名（basename），不含 `/`；例如 `find(v_path, "*.txt")` 在任意深度命中名为 `*.txt` 的文件。
+- `find_ex` 在 `find` 基础上提供深度预算与相对路径；`max_depth == 0` 表示不限制。
 - 结果通过 `CCDataCallback` 逐个交付；回调返回非 `0` 时中断并透传。
+- `realpath` 把虚拟节点映射回宿主绝对路径；包内子树与纯内存节点没有独立宿主实体。
 
 ---
 
@@ -342,7 +383,7 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path); 
 
 | 文件 | 职责 |
 |---|---|
-| `src/ccfiles.c` | 运行时状态、节点红黑树、节点 / 挂载生命周期、探针、初始化，以及 chdir / stat / list / find 查询 |
+| `src/ccfiles.c` | 运行时状态、节点红黑树、节点 / 挂载生命周期、探针、初始化，以及 chdir / stat / list / find / find_ex / realpath 查询 |
 | `src/ccfiles_utilities.c` | 字符串与动态路径缓冲、时间、宿主文件系统原语、res 目录解析、64 位定位 / 截断 |
 | `src/ccfiles_path.c` | 挂载锚点、物理路径解析、虚拟路径走查、目录投影扫描、挂载 / 卸载 / 刷新 |
 | `src/ccfiles_rw.c` | 节点常驻句柄、原始读写、公开的 open / read / write / flush |
@@ -364,7 +405,8 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path); 
 类型标识符（实现时取值可自定）：
 
 ```C
-typedef enum cc_fs_type {
+typedef enum cc_fs_type
+{
     CC_FS_TYPE_NONE = 0,
     CC_FS_TYPE_DIR  = 1,
     CC_FS_TYPE_FILE = 2,
@@ -381,7 +423,8 @@ typedef enum cc_fs_type {
 /* 前置声明：CCFsMount 定义见 6.2 */
 typedef struct cc_fs_mount CCFsMount;
 
-typedef struct cc_fs_node {
+typedef struct cc_fs_node
+{
     /* 键：文件名（字符串本体独立分配，节点只持指针） */
     char     *name;
     /* 红黑树字段：位于父目录的子红黑树中，一律存下标，CC_FS_NIL 表示空 */
@@ -424,7 +467,8 @@ typedef struct cc_fs_node {
 **挂载信息**由每个节点持有；新建节点的 `real_path` 默认为 `NULL`（跟随上级，属内部默认态），显式 `mount` 必须给出非 NULL 的 `real_path` 才能建立锚点：
 
 ```C
-typedef struct cc_fs_mount {
+typedef struct cc_fs_mount
+{
     char     *real_path;   /* 真实路径（一律用 `/`，禁止反斜杠）；NULL = 跟随上级（继承，仅内部默认态，mount 不接受 NULL） */
     CCUINT32  type;        /* CCFsMountType，见 1.4 */
     CCUINT8   origin;      /* 来源：内存创建 / 磁盘投影 / 包投影 */
@@ -439,7 +483,8 @@ typedef struct cc_fs_mount {
 `CCFiles` 是堆分配的探针，记录持有者的操作起点：
 
 ```C
-typedef struct cc_files {
+typedef struct cc_files
+{
     _Atomic CCBOOL alive;  /* CCFALSE = 该探针已失效（其 cur 指向的节点被删除） */
     CCUINT32  cwd;         /* 当前工作目录节点下标（默认指向 `/`） */
     CCUINT32  cur;         /* 当前指向的文件节点下标；CC_FS_NIL 表示未指向文件 */

@@ -6,7 +6,7 @@
  * @Description: 红黑树内核（cc_rbt_core）的测试。
  *               测试侧扮演「用户」角色：自定义节点结构并实现完整的 CC_RbtOps，
  *               以此验证内核与具体节点结构的解耦性。
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #include "test_header.h"
@@ -18,7 +18,8 @@
  * 用户侧：具体节点结构与 CC_RbtOps 实现
  * ============================================================================ */
 
-typedef struct test_rbt_node {
+typedef struct test_rbt_node
+{
     CCUINTPTR key;
     CCBOOL red;
     struct test_rbt_node *left;
@@ -26,7 +27,8 @@ typedef struct test_rbt_node {
     struct test_rbt_node *parent;
 } test_rbt_node;
 
-typedef struct test_rbt_tree {
+typedef struct test_rbt_tree
+{
     CC_RbtOps ops;
     test_rbt_node *root;
     CCINT32 ch_root_count;  // ch_root 被调用次数
@@ -39,7 +41,8 @@ static CCINT32 test_cmp_key(void *user, void *node, CCUINTPTR key)
 {
     (void)user;
     CCUINTPTR k = ((test_rbt_node*)node)->key;
-    if (k == key) return 0;
+    if (k == key)
+        return 0;
     return (k > key) ? 1 : -1;
 }
 
@@ -48,7 +51,8 @@ static CCINT32 test_cmp_node(void *user, void *node_1, void *node_2)
     (void)user;
     CCUINTPTR a = ((test_rbt_node*)node_1)->key;
     CCUINTPTR b = ((test_rbt_node*)node_2)->key;
-    if (a == b) return 0;
+    if (a == b)
+        return 0;
     return (a > b) ? 1 : -1;
 }
 
@@ -61,18 +65,19 @@ static CCINT32 test_copy_node(void *user, void *dst_node, void *src_node)
 }
 
 // 中序后继
-static void* test_find_instead(void *user, void *node)
+static void *test_find_instead(void *user, void *node)
 {
     (void)user;
     test_rbt_node *succ = ((test_rbt_node*)node)->right;
-    if (!succ) return NULL;
+    if (!succ)
+        return NULL;
     while (succ->left) succ = succ->left;
     return succ;
 }
 
 /* ---- 结构访问 ---- */
 
-static void* test_get_node(void *user, void *node, CC_RbtRel relation)
+static void *test_get_node(void *user, void *node, CC_RbtRel relation)
 {
     (void)user;
     test_rbt_node *n = (test_rbt_node*)node;
@@ -121,13 +126,16 @@ static CCINT32 test_left_rotate(void *user, void *node)
     test_rbt_tree *t = (test_rbt_tree*)user;
     test_rbt_node *x = (test_rbt_node*)node;
     test_rbt_node *y = x->right;
-    if (!y) return 1;
+    if (!y)
+        return 1;
     x->right = y->left;
-    if (y->left) y->left->parent = x;
+    if (y->left)
+        y->left->parent = x;
     y->parent = x->parent;
     if (x->parent)
     {
-        if (x->parent->left == x) x->parent->left = y;
+        if (x->parent->left == x)
+            x->parent->left = y;
         else x->parent->right = y;
     }
     y->left = x;
@@ -141,13 +149,16 @@ static CCINT32 test_right_rotate(void *user, void *node)
     test_rbt_tree *t = (test_rbt_tree*)user;
     test_rbt_node *x = (test_rbt_node*)node;
     test_rbt_node *y = x->left;
-    if (!y) return 1;
+    if (!y)
+        return 1;
     x->left = y->right;
-    if (y->right) y->right->parent = x;
+    if (y->right)
+        y->right->parent = x;
     y->parent = x->parent;
     if (x->parent)
     {
-        if (x->parent->left == x) x->parent->left = y;
+        if (x->parent->left == x)
+            x->parent->left = y;
         else x->parent->right = y;
     }
     y->right = x;
@@ -192,7 +203,8 @@ static void tree_init(test_rbt_tree *t)
 static test_rbt_node* tree_insert_key(test_rbt_tree *t, CCUINTPTR key)
 {
     test_rbt_node *n = (test_rbt_node*)malloc(sizeof(test_rbt_node));
-    if (!n) return NULL;
+    if (!n)
+        return NULL;
     memset(n, 0, sizeof(*n));
     n->key = key;
     if (cc_rbt_core_insert(&t->ops, t->root, n) != 0)
@@ -210,7 +222,8 @@ static CCINT32 tree_size(const test_rbt_node *n)
 
 static void tree_free_nodes(test_rbt_node *n)
 {
-    if (!n) return;
+    if (!n)
+        return;
     tree_free_nodes(n->left);
     tree_free_nodes(n->right);
     free(n);
@@ -230,17 +243,24 @@ static CCBOOL node_check(const test_rbt_node *n, CCINT32 *black_height)
         *black_height = 1;
         return CCTRUE;
     }
-    if (n->left && n->left->parent != n) return CCFALSE;
-    if (n->right && n->right->parent != n) return CCFALSE;
+    if (n->left && n->left->parent != n)
+        return CCFALSE;
+    if (n->right && n->right->parent != n)
+        return CCFALSE;
     if (n->red)
     {
-        if (n->left && n->left->red) return CCFALSE;
-        if (n->right && n->right->red) return CCFALSE;
+        if (n->left && n->left->red)
+            return CCFALSE;
+        if (n->right && n->right->red)
+            return CCFALSE;
     }
     CCINT32 lh, rh;
-    if (!node_check(n->left, &lh)) return CCFALSE;
-    if (!node_check(n->right, &rh)) return CCFALSE;
-    if (lh != rh) return CCFALSE;
+    if (!node_check(n->left, &lh))
+        return CCFALSE;
+    if (!node_check(n->right, &rh))
+        return CCFALSE;
+    if (lh != rh)
+        return CCFALSE;
     *black_height = lh + (n->red ? 0 : 1);
     return CCTRUE;
 }
@@ -281,13 +301,18 @@ static CCBOOL tree_drain_verify(test_rbt_tree *t, const CCUINTPTR *keys, CCINT32
     for (CCINT32 i = 0; i < n; i++)
     {
         void *removed = cc_rbt_core_remove(&t->ops, t->root, keys[i]);
-        if (!removed) return CCFALSE;
+        if (!removed)
+            return CCFALSE;
         free(removed);
-        if (!tree_valid(t)) return CCFALSE;
-        if (tree_size(t->root) != n - i - 1) return CCFALSE;
-        if (cc_rbt_core_get(&t->ops, t->root, keys[i]) != NULL) return CCFALSE;
+        if (!tree_valid(t))
+            return CCFALSE;
+        if (tree_size(t->root) != n - i - 1)
+            return CCFALSE;
+        if (cc_rbt_core_get(&t->ops, t->root, keys[i]) != NULL)
+            return CCFALSE;
         for (CCINT32 j = i + 1; j < n; j++)
-            if (cc_rbt_core_get(&t->ops, t->root, keys[j]) == NULL) return CCFALSE;
+            if (cc_rbt_core_get(&t->ops, t->root, keys[j]) == NULL)
+                return CCFALSE;
     }
     return t->root == NULL;
 }
@@ -307,7 +332,8 @@ static CCUINT32 rng_next(void)
     return (rng_state >> 16) & 0x7fffu;
 }
 
-typedef struct inorder_ctx {
+typedef struct inorder_ctx
+{
     CCUINTPTR keys[RBT_N];
     CCINT32 count;
     CCINT32 stop_at;    // >0 时收集到该数量后即中断
@@ -479,9 +505,11 @@ static void test_rbt_traverse(void)
 
 static test_rbt_node* find_one_child(test_rbt_node *n)
 {
-    if (!n) return NULL;
+    if (!n)
+        return NULL;
     CCINT32 c = (n->left ? 1 : 0) + (n->right ? 1 : 0);
-    if (c == 1) return n;
+    if (c == 1)
+        return n;
     test_rbt_node *r = find_one_child(n->left);
     return r ? r : find_one_child(n->right);
 }
@@ -552,7 +580,7 @@ static void test_rbt_remove_two_children(void)
     CCINT32 size_before = tree_size(t.root);
     void *removed = cc_rbt_core_remove(&t.ops, t.root, 10);
     rbt_expect(removed != NULL, "删除双子节点返回非空");
-    rbt_expect(removed != (void*)cc_rbt_core_get(&t.ops, t.root, 15), "双子删除返回的是被摘除的替换节点");
+    rbt_expect(removed != (void *)cc_rbt_core_get(&t.ops, t.root, 15), "双子删除返回的是被摘除的替换节点");
     rbt_expect(((test_rbt_node*)removed)->key == 15, "双子删除返回中序后继节点");
     free(removed);
     rbt_expect(tree_valid(&t), "删除双子节点后仍合法");

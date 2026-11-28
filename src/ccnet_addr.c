@@ -10,15 +10,15 @@
 #include "ccnet_internal.h"
 
 #include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
 static CCINT32 _scope_from_text(const char *text, CCUINT32 *out)
 {
     char *end = NULL;
-    unsigned long value;
-    unsigned int index;
+    unsigned long value;    // strtoul 的原生返回宽度：ERANGE 与 UINT32 上界判定依赖它
+    unsigned int index;     // if_nametoindex 的返回类型：与 IPv6 接口索引同宽
 
     if (!text || !*text)
         return CC_NET_ERR_PARAM;
@@ -192,7 +192,7 @@ CCINT32 ccnet_addr_parse(const char *text, CCUINT16 port, CCNetAddr *out)
 CCINT32 ccnet_addr_text(const CCNetAddr *addr, char *buf, CCUINT32 size)
 {
     char ip[64];
-    int n;
+    CCINT32 n;
 
     if (!addr || !buf || size == 0)
         return CC_NET_ERR_PARAM;
@@ -208,8 +208,10 @@ CCINT32 ccnet_addr_text(const CCNetAddr *addr, char *buf, CCUINT32 size)
         if (!inet_ntop(AF_INET6, addr->addr, ip, (CCNetSockLen)sizeof(ip)))
             return CC_NET_ERR_PARAM;
         if (addr->scope != 0)
-            n = snprintf(buf, (size_t)size, "[%s%%%u]:%u", ip,
-                         (unsigned)addr->scope, (unsigned)addr->port);
+            n = snprintf(
+                buf, (size_t)size, "[%s%%%u]:%u", ip,
+                (unsigned)addr->scope, (unsigned)addr->port
+            );
         else
             n = snprintf(buf, (size_t)size, "[%s]:%u", ip, (unsigned)addr->port);
     }
@@ -230,7 +232,7 @@ CCINT32 ccnet_dns(const char *host, CCUINT16 port, CCNetAddr *out, CCUINT32 cap)
     struct addrinfo *res = NULL;
     struct addrinfo *cur;
     CCINT32 count = 0;
-    int rc;
+    int rc;     // getaddrinfo 的返回类型：Winsock 与 POSIX 均为 int
 
     if (!host || !*host || !out || cap == 0)
         return CC_NET_ERR_PARAM;
@@ -261,6 +263,7 @@ CCINT32 ccnet_dns(const char *host, CCUINT16 port, CCNetAddr *out, CCUINT32 cap)
         out[count++] = item;
     }
 
+    // addrinfo 链表由 getaddrinfo 分配，只能用 freeaddrinfo 释放
     freeaddrinfo(res);
     if (count == 0)
         return CC_NET_ERR_DNS;

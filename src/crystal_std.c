@@ -3,13 +3,13 @@
  * @Date: 2026-09
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-11
- * @Description: 
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * @Description:
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #include "crystal_std_inner_header.h"
 
-CC_RUN_BEFORE_MAIN void _init_crystal_std_()
+CC_RUN_BEFORE_MAIN void _init_crystal_std_(void)
 {
     init_console();
 #ifdef CC_DEBUG
@@ -22,7 +22,7 @@ CC_RUN_BEFORE_MAIN void _init_crystal_std_()
     init_ccnet();
 }
 
-CC_RUN_AFTER_MAIN void _deinit_crystal_std_()
+CC_RUN_AFTER_MAIN void _deinit_crystal_std_(void)
 {
     deinit_ccnet();
     deinit_ccfiles();

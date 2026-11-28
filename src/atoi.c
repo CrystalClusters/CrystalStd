@@ -1,3 +1,12 @@
+/*
+ * @Author: Renascent Adore lizaterop@gmail.com
+ * @Date: 2026-09
+ * @LastEditors: Renascent Adore lizaterop@gmail.com
+ * @LastEditTime: 2026-11
+ * @Description: 字符串到整数转换。
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
+ */
+
 #include <cc_atoi.h>
 #include <color_print.h>
 
@@ -9,7 +18,8 @@
  */
 CCINT32 cc_atoi(const char *str_num)
 {
-    if (!str_num) return 0;
+    if (!str_num)
+        return 0;
     CCINT64 num = 0;
     CCINT64 digit = 0;
     CCINT64 pow = 1;
@@ -19,7 +29,7 @@ CCINT32 cc_atoi(const char *str_num)
         pow = -1;
         str_num++;
     }
-    /* 空串 / 只有负号：没有可转换的数字，避免 cursor 下溢 */
+    // 空串 / 只有负号：没有可转换的数字，避免 cursor 下溢
     if (*str_num == '\0')
         return 0;
     const char *cursor = str_num;

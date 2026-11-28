@@ -26,7 +26,8 @@
 #include "ccnet_internal.h"
 #include <stdatomic.h>
 
-typedef struct net_case {
+typedef struct net_case
+{
     _Atomic CCINT32 flag_port;
     _Atomic CCINT32 flag_client_done;
     _Atomic CCINT32 flag_server_done;
@@ -97,8 +98,10 @@ static void _tcp_echo_conn(const CCNetTcpOps *ops, void *ctx, void *user)
             CCINT64 off = 0;
             while (off < n)
             {
-                CCINT64 w = ops->send(ctx, buf + off,
-                                      (CCUINT64)(n - off), 100000);
+                CCINT64 w = ops->send(
+                    ctx, buf + off,
+                    (CCUINT64)(n - off), 100000
+                );
                 if (w == CC_NET_ERR_TIMEOUT)
                     continue;
                 if (w < 0)
@@ -230,25 +233,36 @@ static void _test_tcp_timeout_fin(void)
 
     CC_CASE("NET-TCP-002", "接收超时与对端 FIN 状态");
     _net_case_init(&c);
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("listen", CC_NET_OK,
-                    ccnet_tcp_listen(&addr, _tcp_accept_fin, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "listen", CC_NET_OK,
+        ccnet_tcp_listen(&addr, _tcp_accept_fin, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到监听端口");
 
-    CC_CHECK_EQ_I64("parse connect", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", c.port, &addr));
-    CC_CHECK_EQ_I64("connect", CC_NET_OK,
-                    ccnet_tcp_connect(&addr, 3000000, _tcp_client_silent, &c));
+    CC_CHECK_EQ_I64(
+        "parse connect", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", c.port, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "connect", CC_NET_OK,
+        ccnet_tcp_connect(&addr, 3000000, _tcp_client_silent, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 3000000), "客户端超时返回");
     CC_CHECK(c.flag_timeout == 1, "客户端观察到 TIMEOUT");
     CC_CHECK(_wait_flag(&c.flag_server_done, 3000000), "服务端观察到 FIN");
-    CC_CHECK_EQ_I64("FIN 后状态为 PEER_CLOSED",
-                    (CCINT64)CC_NET_STATE_PEER_CLOSED, (CCINT64)c.state);
+    CC_CHECK_EQ_I64(
+        "FIN 后状态为 PEER_CLOSED",
+        (CCINT64)CC_NET_STATE_PEER_CLOSED, (CCINT64)c.state
+    );
     CC_CASE_END();
 }
 
-typedef struct duplex_writer {
+typedef struct duplex_writer
+{
     const CCNetTcpOps *ops;
     void *ctx;
     _Atomic CCINT32 done;
@@ -275,8 +289,10 @@ static void _duplex_writer(void *data, CCThread idThis)
 
         while (off < DUPLEX_LEN)
         {
-            CCINT64 sent = w->ops->send(w->ctx, msg + off,
-                                        (CCUINT64)(DUPLEX_LEN - off), 1000000);
+            CCINT64 sent = w->ops->send(
+                w->ctx, msg + off,
+                (CCUINT64)(DUPLEX_LEN - off), 1000000
+            );
             if (sent == CC_NET_ERR_TIMEOUT)
                 continue;
             if (sent < 0)
@@ -346,15 +362,23 @@ static void _test_tcp_duplex(void)
 
     CC_CASE("NET-TCP-003", "一读一写协作线程全双工");
     _net_case_init(&c);
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("listen", CC_NET_OK,
-                    ccnet_tcp_listen(&addr, _tcp_accept_one, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "listen", CC_NET_OK,
+        ccnet_tcp_listen(&addr, _tcp_accept_one, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到监听端口");
-    CC_CHECK_EQ_I64("parse connect", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", c.port, &addr));
-    CC_CHECK_EQ_I64("connect", CC_NET_OK,
-                    ccnet_tcp_connect(&addr, 3000000, _duplex_client, &c));
+    CC_CHECK_EQ_I64(
+        "parse connect", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", c.port, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "connect", CC_NET_OK,
+        ccnet_tcp_connect(&addr, 3000000, _duplex_client, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 8000000), "全双工收发完成");
     c.flag_stop = 1;
     CC_CHECK(_wait_flag(&c.flag_server_done, 5000000), "服务端入口退出");
@@ -366,7 +390,8 @@ static void _test_tcp_duplex(void)
 
 #define MULTI_MAX 32
 
-typedef struct multi_shared {
+typedef struct multi_shared
+{
     CCINT32 clients;
     _Atomic CCINT32 port_ready;
     _Atomic CCINT32 listener_done;
@@ -375,7 +400,8 @@ typedef struct multi_shared {
     _Atomic CCUINT32 port;
 } multi_shared;
 
-typedef struct multi_client {
+typedef struct multi_client
+{
     multi_shared *shared;
     CCINT32 id;
     _Atomic CCINT32 done;
@@ -501,23 +527,33 @@ static void _test_tcp_multi(void)
     CC_CASE("NET-TCP-004", "多客户端并发连接与隔离");
     _multi_shared_init(&s, clients);
 
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("listen", CC_NET_OK,
-                    ccnet_tcp_listen(&addr, _multi_accept, &s));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "listen", CC_NET_OK,
+        ccnet_tcp_listen(&addr, _multi_accept, &s)
+    );
     CC_CHECK(_wait_flag(&s.port_ready, 3000000), "取到监听端口");
 
-    CC_CHECK_EQ_I64("parse connect", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", (CCUINT16)s.port, &addr));
+    CC_CHECK_EQ_I64(
+        "parse connect", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", (CCUINT16)s.port, &addr)
+    );
     for (i = 0; i < clients; i++)
     {
         cs[i].shared = &s;
         cs[i].id = i;
         atomic_init(&cs[i].done, 0);
         atomic_init(&cs[i].ok, 0);
-        CC_CHECK_EQ_I64("connect", CC_NET_OK,
-                        ccnet_tcp_connect(&addr, 3000000,
-                                          _multi_client_entry, &cs[i]));
+        CC_CHECK_EQ_I64(
+            "connect", CC_NET_OK,
+            ccnet_tcp_connect(
+                &addr, 3000000,
+                _multi_client_entry, &cs[i]
+            )
+        );
     }
 
     for (i = 0; i < clients; i++)
@@ -534,10 +570,14 @@ static void _test_tcp_multi(void)
     }
 
     CC_CHECK_EQ_I64("服务端连接全部结束", clients, _multi_done_count(&s));
-    CC_CHECK(atomic_load_explicit(&s.listener_done, memory_order_acquire) == 1,
-             "监听器 accept 循环结束");
-    CC_CHECK(atomic_load_explicit(&s.accept_fail, memory_order_acquire) == 0,
-             "所有 accept 成功");
+    CC_CHECK(
+        atomic_load_explicit(&s.listener_done, memory_order_acquire) == 1,
+        "监听器 accept 循环结束"
+    );
+    CC_CHECK(
+        atomic_load_explicit(&s.accept_fail, memory_order_acquire) == 0,
+        "所有 accept 成功"
+    );
     CC_CASE_END();
 }
 
@@ -580,8 +620,10 @@ static CCINT32 _raw_rst_client(const CCNetAddr *addr)
 
     lg.l_onoff = 1;
     lg.l_linger = 0;
-    (void)setsockopt(sock, SOL_SOCKET, SO_LINGER,
-                     (const char *)&lg, sizeof(lg));
+    (void)setsockopt(
+        sock, SOL_SOCKET, SO_LINGER,
+        (const char *)&lg, sizeof(lg)
+    );
 
 #ifdef CC_WINDOWS
     closesocket(sock);
@@ -638,21 +680,29 @@ static void _test_tcp_reset(void)
     CC_CASE("NET-TCP-005", "对端 RST 的错误与 FAILED 状态");
     _net_case_init(&c);
 
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("listen", CC_NET_OK,
-                    ccnet_tcp_listen(&addr, _rst_accept, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "listen", CC_NET_OK,
+        ccnet_tcp_listen(&addr, _rst_accept, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到监听端口");
 
-    CC_CHECK_EQ_I64("parse connect", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", c.port, &addr));
+    CC_CHECK_EQ_I64(
+        "parse connect", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", c.port, &addr)
+    );
     rc = _raw_rst_client(&addr);
     CC_CHECK_EQ_I64("原生客户端发送 RST", 0, rc);
 
     CC_CHECK(_wait_flag(&c.flag_server_done, 5000000), "服务端观察到 RST");
     CC_CHECK(c.flag_reset == 1, "recv 返回 RESET");
-    CC_CHECK_EQ_I64("RST 后状态为 FAILED",
-                    (CCINT64)CC_NET_STATE_FAILED, (CCINT64)c.state);
+    CC_CHECK_EQ_I64(
+        "RST 后状态为 FAILED",
+        (CCINT64)CC_NET_STATE_FAILED, (CCINT64)c.state
+    );
     CC_CHECK(c.flag_state == 1, "后续 recv 返回 STATE");
     CC_CASE_END();
 }
@@ -662,8 +712,11 @@ static CCBOOL _keepalive_enabled(CCNetSocket sock)
     int on = 0;
     CCNetSockLen len = (CCNetSockLen)sizeof(on);
 
-    if (getsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
-                   (char *)&on, &len) != 0 || on == 0)
+    if (getsockopt(
+            sock, SOL_SOCKET, SO_KEEPALIVE,
+            (char *)&on, &len
+        ) != 0 || on == 0
+    )
         return CCFALSE;
 
 #ifndef CC_WINDOWS
@@ -671,9 +724,12 @@ static CCBOOL _keepalive_enabled(CCNetSocket sock)
     {
         int idle = 0;
         len = (CCNetSockLen)sizeof(idle);
-        if (getsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE,
-                       (char *)&idle, &len) != 0 ||
-            idle != CC_NET_KEEPALIVE_IDLE_SEC)
+        if (getsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPIDLE,
+                (char *)&idle, &len
+            ) != 0 ||
+            idle != CC_NET_KEEPALIVE_IDLE_SEC
+        )
             return CCFALSE;
     }
 #endif
@@ -681,9 +737,12 @@ static CCBOOL _keepalive_enabled(CCNetSocket sock)
     {
         int interval = 0;
         len = (CCNetSockLen)sizeof(interval);
-        if (getsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL,
-                       (char *)&interval, &len) != 0 ||
-            interval != CC_NET_KEEPALIVE_INTERVAL_SEC)
+        if (getsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPINTVL,
+                (char *)&interval, &len
+            ) != 0 ||
+            interval != CC_NET_KEEPALIVE_INTERVAL_SEC
+        )
             return CCFALSE;
     }
 #endif
@@ -691,9 +750,12 @@ static CCBOOL _keepalive_enabled(CCNetSocket sock)
     {
         int count = 0;
         len = (CCNetSockLen)sizeof(count);
-        if (getsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT,
-                       (char *)&count, &len) != 0 ||
-            count != CC_NET_KEEPALIVE_COUNT)
+        if (getsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPCNT,
+                (char *)&count, &len
+            ) != 0 ||
+            count != CC_NET_KEEPALIVE_COUNT
+        )
             return CCFALSE;
     }
 #endif
@@ -742,16 +804,24 @@ static void _test_tcp_keepalive(void)
     CC_CASE("NET-TCP-006", "TCP keepalive 默认开启且参数匹配");
     _net_case_init(&c);
 
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("listen", CC_NET_OK,
-                    ccnet_tcp_listen(&addr, _keepalive_accept, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "listen", CC_NET_OK,
+        ccnet_tcp_listen(&addr, _keepalive_accept, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到监听端口");
 
-    CC_CHECK_EQ_I64("parse connect", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", c.port, &addr));
-    CC_CHECK_EQ_I64("connect", CC_NET_OK,
-                    ccnet_tcp_connect(&addr, 3000000, _keepalive_client, &c));
+    CC_CHECK_EQ_I64(
+        "parse connect", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", c.port, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "connect", CC_NET_OK,
+        ccnet_tcp_connect(&addr, 3000000, _keepalive_client, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 3000000), "客户端入口完成");
     CC_CHECK(_wait_flag(&c.flag_server_done, 3000000), "服务端入口完成");
     CC_CHECK(c.flag_keepalive_client == 1, "客户端 socket 已开启 keepalive");
@@ -817,16 +887,24 @@ static void _test_udp_echo(void)
 
     CC_CASE("NET-UDP-001", "UDP 回显");
     _net_case_init(&c);
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_echo_entry, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_echo_entry, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到端点端口");
 
-    CC_CHECK_EQ_I64("parse bind client", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open client", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_client_echo, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind client", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open client", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_client_echo, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 3000000), "UDP 客户端完成");
     c.flag_stop = 1;
     CC_CHECK(_wait_flag(&c.flag_server_done, 3000000), "UDP 服务端退出");
@@ -859,15 +937,23 @@ static void _test_udp_zero(void)
 
     CC_CASE("NET-UDP-002", "零长度数据报合法");
     _net_case_init(&c);
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_echo_entry, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_echo_entry, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到端点端口");
-    CC_CHECK_EQ_I64("parse client", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open client", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_zero_client, &c));
+    CC_CHECK_EQ_I64(
+        "parse client", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open client", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_zero_client, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 3000000), "零长度客户端完成");
     c.flag_stop = 1;
     CC_CHECK(_wait_flag(&c.flag_server_done, 3000000), "服务端退出");
@@ -922,15 +1008,23 @@ static void _test_udp_trunc(void)
 
     CC_CASE("NET-UDP-003", "截断数据报整包丢弃");
     _net_case_init(&c);
-    CC_CHECK_EQ_I64("parse bind", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_trunc_entry, &c));
+    CC_CHECK_EQ_I64(
+        "parse bind", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_trunc_entry, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_port, 3000000), "取到端点端口");
-    CC_CHECK_EQ_I64("parse client", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 0, &addr));
-    CC_CHECK_EQ_I64("udp open client", CC_NET_OK,
-                    ccnet_udp_open(&addr, _udp_trunc_client, &c));
+    CC_CHECK_EQ_I64(
+        "parse client", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 0, &addr)
+    );
+    CC_CHECK_EQ_I64(
+        "udp open client", CC_NET_OK,
+        ccnet_udp_open(&addr, _udp_trunc_client, &c)
+    );
     CC_CHECK(_wait_flag(&c.flag_client_done, 3000000), "截断客户端完成");
     CC_CHECK(_wait_flag(&c.flag_server_done, 3000000), "服务端观察到截断");
     CC_CHECK(c.flag_trunc == 1, "recvfrom 返回 TRUNCATED");
@@ -945,33 +1039,47 @@ static void _test_addr(void)
     char text[64];
 
     CC_CASE("NET-ADDR-001", "IPv4 / IPv6 地址解析与文本");
-    CC_CHECK_EQ_I64("parse IPv4", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse IPv4", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 9000, &a)
+    );
     CC_CHECK_EQ_I64("family v4", CC_NET_AF_INET, a.family);
     CC_CHECK_EQ_I64("port v4", 9000, a.port);
-    CC_CHECK(a.addr[0] == 127 && a.addr[1] == 0 &&
-             a.addr[2] == 0 && a.addr[3] == 1, "IPv4 字节");
+    CC_CHECK(
+        a.addr[0] == 127 && a.addr[1] == 0 &&
+        a.addr[2] == 0 && a.addr[3] == 1, "IPv4 字节"
+    );
 
-    CC_CHECK_EQ_I64("parse IPv6", CC_NET_OK,
-                    ccnet_addr_parse("::1", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse IPv6", CC_NET_OK,
+        ccnet_addr_parse("::1", 9000, &a)
+    );
     CC_CHECK_EQ_I64("family v6", CC_NET_AF_INET6, a.family);
     CC_CHECK(a.addr[15] == 1, "IPv6 末字节");
 
-    CC_CHECK_EQ_I64("parse domain", CC_NET_ERR_DNS,
-                    ccnet_addr_parse("example.com", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse domain", CC_NET_ERR_DNS,
+        ccnet_addr_parse("example.com", 9000, &a)
+    );
 
-    CC_CHECK_EQ_I64("parse v4", CC_NET_OK,
-                    ccnet_addr_parse("1.2.3.4", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse v4", CC_NET_OK,
+        ccnet_addr_parse("1.2.3.4", 9000, &a)
+    );
     CC_CHECK_EQ_I64("text v4", CC_NET_OK, ccnet_addr_text(&a, text, sizeof(text)));
     CC_CHECK_EQ_STR("text v4 内容", "1.2.3.4:9000", text);
 
-    CC_CHECK_EQ_I64("parse v6", CC_NET_OK,
-                    ccnet_addr_parse("2001:db8::1", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse v6", CC_NET_OK,
+        ccnet_addr_parse("2001:db8::1", 9000, &a)
+    );
     CC_CHECK_EQ_I64("text v6", CC_NET_OK, ccnet_addr_text(&a, text, sizeof(text)));
     CC_CHECK_EQ_STR("text v6 内容", "[2001:db8::1]:9000", text);
 
-    CC_CHECK_EQ_I64("text 小缓冲", CC_NET_ERR_PARAM,
-                    ccnet_addr_text(&a, text, 4));
+    CC_CHECK_EQ_I64(
+        "text 小缓冲", CC_NET_ERR_PARAM,
+        ccnet_addr_text(&a, text, 4)
+    );
     CC_CASE_END();
 }
 
@@ -981,24 +1089,36 @@ static void _test_scope(void)
     char text[64];
 
     CC_CASE("NET-ADDR-002", "IPv6 scope 解析与文本");
-    CC_CHECK_EQ_I64("parse scope", CC_NET_OK,
-                    ccnet_addr_parse("[fe80::1%3]", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "parse scope", CC_NET_OK,
+        ccnet_addr_parse("[fe80::1%3]", 9000, &a)
+    );
     CC_CHECK_EQ_I64("scope 值", 3, a.scope);
     CC_CHECK_EQ_I64("text scope", CC_NET_OK, ccnet_addr_text(&a, text, sizeof(text)));
     CC_CHECK_EQ_STR("text scope 内容", "[fe80::1%3]:9000", text);
 
-    CC_CHECK_EQ_I64("v4 带 scope", CC_NET_ERR_PARAM,
-                    ccnet_addr_parse("1.2.3.4%3", 9000, &a));
-    CC_CHECK_EQ_I64("v6 未指定 scope", CC_NET_OK,
-                    ccnet_addr_parse("fe80::1", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "v4 带 scope", CC_NET_ERR_PARAM,
+        ccnet_addr_parse("1.2.3.4%3", 9000, &a)
+    );
+    CC_CHECK_EQ_I64(
+        "v6 未指定 scope", CC_NET_OK,
+        ccnet_addr_parse("fe80::1", 9000, &a)
+    );
     CC_CHECK_EQ_I64("scope 为 0", 0, a.scope);
 
-    CC_CHECK_EQ_I64("scope 超界", CC_NET_ERR_PARAM,
-                    ccnet_addr_parse("[fe80::1%4294967296]", 9000, &a));
-    CC_CHECK_EQ_I64("scope 负数", CC_NET_ERR_PARAM,
-                    ccnet_addr_parse("[fe80::1%-1]", 9000, &a));
-    CC_CHECK_EQ_I64("scope 最大值", CC_NET_OK,
-                    ccnet_addr_parse("[fe80::1%4294967295]", 9000, &a));
+    CC_CHECK_EQ_I64(
+        "scope 超界", CC_NET_ERR_PARAM,
+        ccnet_addr_parse("[fe80::1%4294967296]", 9000, &a)
+    );
+    CC_CHECK_EQ_I64(
+        "scope 负数", CC_NET_ERR_PARAM,
+        ccnet_addr_parse("[fe80::1%-1]", 9000, &a)
+    );
+    CC_CHECK_EQ_I64(
+        "scope 最大值", CC_NET_OK,
+        ccnet_addr_parse("[fe80::1%4294967295]", 9000, &a)
+    );
     CC_CHECK_EQ_I64("scope 最大值", 4294967295, a.scope);
     CC_CASE_END();
 }
@@ -1014,16 +1134,24 @@ static void _test_dns(void)
     if (n >= 1)
         CC_CHECK_EQ_I64("dns 端口", 9000, out[0].port);
 
-    CC_CHECK_EQ_I64("字面量快速路径", 1,
-                    ccnet_dns("127.0.0.1", 9000, out, 8));
+    CC_CHECK_EQ_I64(
+        "字面量快速路径", 1,
+        ccnet_dns("127.0.0.1", 9000, out, 8)
+    );
     CC_CHECK_EQ_I64("字面量 family", CC_NET_AF_INET, out[0].family);
 
-    CC_CHECK_EQ_I64("空 host", CC_NET_ERR_PARAM,
-                    ccnet_dns(NULL, 9000, out, 8));
-    CC_CHECK_EQ_I64("cap 0", CC_NET_ERR_PARAM,
-                    ccnet_dns("localhost", 9000, out, 0));
-    CC_CHECK_EQ_I64("cap 超界", CC_NET_ERR_PARAM,
-                    ccnet_dns("localhost", 9000, out, 0x80000000u));
+    CC_CHECK_EQ_I64(
+        "空 host", CC_NET_ERR_PARAM,
+        ccnet_dns(NULL, 9000, out, 8)
+    );
+    CC_CHECK_EQ_I64(
+        "cap 0", CC_NET_ERR_PARAM,
+        ccnet_dns("localhost", 9000, out, 0)
+    );
+    CC_CHECK_EQ_I64(
+        "cap 超界", CC_NET_ERR_PARAM,
+        ccnet_dns("localhost", 9000, out, 0x80000000u)
+    );
     CC_CASE_END();
 }
 
@@ -1046,8 +1174,10 @@ static void _test_setup_failure(void)
 
     CC_CASE("NET-LIFE-001", "setup 失败不调用入口");
     atomic_store_explicit(&g_setup_entry_called, 0, memory_order_release);
-    CC_CHECK_EQ_I64("parse", CC_NET_OK,
-                    ccnet_addr_parse("127.0.0.1", 1, &a));
+    CC_CHECK_EQ_I64(
+        "parse", CC_NET_OK,
+        ccnet_addr_parse("127.0.0.1", 1, &a)
+    );
     rc = ccnet_tcp_connect(&a, 1000000, _setup_fail_entry, NULL);
     CC_CHECK(rc < 0, "连接失败返回负值");
     CC_CHECK(atomic_load_explicit(&g_setup_entry_called, memory_order_acquire) == 0, "入口未被调用");

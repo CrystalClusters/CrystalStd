@@ -6,7 +6,7 @@
  * @Description: 异步组件（ccthread）的测试。
  *               覆盖线程创建/查询/等待、用户数据与 ID 传递、
  *               并发创建、锁互斥、超时语义以及反复创建回收的正确性。
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #include "test_header.h"
@@ -18,7 +18,8 @@
  * 用例 1：单线程的创建、状态、等待与数据传递
  * ============================================================================ */
 
-typedef struct single_ctx {
+typedef struct single_ctx
+{
     volatile CCINT32 ran;
     volatile CCUINTPTR got_id;
     volatile void *got_data;
@@ -67,7 +68,8 @@ static void test_thread_single(void)
 
 #define MANY_N 16
 
-typedef struct slot_ctx {
+typedef struct slot_ctx
+{
     volatile CCINT32 *slots;
     CCINT32 index;
 } slot_ctx;
@@ -100,8 +102,10 @@ static void test_thread_many(void)
     CCBOOL all_done = CCTRUE;
     for (CCINT32 i = 0; i < MANY_N; i++)
     {
-        if (!slots[i]) all_ran = CCFALSE;
-        if (cc_thread_status(ids[i]) != 0) all_done = CCFALSE;
+        if (!slots[i])
+            all_ran = CCFALSE;
+        if (cc_thread_status(ids[i]) != 0)
+            all_done = CCFALSE;
     }
     thread_expect(all_ran, "并发创建的线程全部完成各自任务");
     thread_expect(all_done, "并发线程结束后状态均可正确查询为 0");
@@ -133,9 +137,11 @@ static void test_thread_unique_ids(void)
     CCBOOL unique = CCTRUE;
     for (CCINT32 i = 0; i < UNIQ_N; i++)
     {
-        if (!ids[i]) unique = CCFALSE;
+        if (!ids[i])
+            unique = CCFALSE;
         for (CCINT32 j = i + 1; j < UNIQ_N; j++)
-            if (ids[i] == ids[j]) unique = CCFALSE;
+            if (ids[i] == ids[j])
+                unique = CCFALSE;
     }
     thread_expect(unique, "同时存活的线程 ID 互不相同");
 
@@ -195,7 +201,8 @@ static void test_thread_invalid(void)
 #define LOCK_N 4
 #define LOCK_ROUNDS 2000
 
-typedef struct lock_ctx {
+typedef struct lock_ctx
+{
     CCLock lock;
     volatile CCINT32 *counter;
     CCINT32 rounds;
@@ -241,7 +248,8 @@ static void test_thread_lock(void)
  * 用例 7：线程入口内查询自身，验证入口不在内部锁内执行
  * ============================================================================ */
 
-typedef struct self_ctx {
+typedef struct self_ctx
+{
     volatile CCINT32 status_seen;
 } self_ctx;
 
@@ -301,7 +309,8 @@ static void test_thread_churn(void)
 
 #define GATE_N 8
 
-typedef struct gate_ctx {
+typedef struct gate_ctx
+{
     volatile CCINT32 *gates;
     CCINT32 index;
 } gate_ctx;
@@ -338,12 +347,15 @@ static void test_thread_gate_recycle(void)
         CCINT32 i = order[k];
         gates[i] = 1;
         cc_thread_wait(ids[i], 0);
-        if (cc_thread_status(ids[i]) != 0) ok = CCFALSE;
+        if (cc_thread_status(ids[i]) != 0)
+            ok = CCFALSE;
         // 其余仍存活的线程必须仍能按 key 正确检索（证明下标搬移没有破坏树）
         for (CCINT32 j = 0; j < GATE_N; j++)
         {
-            if (gates[j]) continue;
-            if (cc_thread_status(ids[j]) != 1) ok = CCFALSE;
+            if (gates[j])
+                continue;
+            if (cc_thread_status(ids[j]) != 1)
+                ok = CCFALSE;
         }
     }
     thread_expect(ok, "非顺序回收后树内其余线程的状态查询仍然正确");

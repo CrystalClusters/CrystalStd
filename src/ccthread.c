@@ -24,20 +24,18 @@ typedef struct cclock
 // 空节点下标哨兵。下标 0 是合法节点，因此不能用 0 表示空。
 #define CC_THREAD_NIL ((CCUINT32)0xFFFFFFFFu)
 
-/*
- * 线程实体参数：堆上分配，作为线程入口的传参结构体。
- *
- * 设计原因：
- * 1. 线程树节点（CCThreadNode）连续存放在 CCDyn 中，扩容/收缩时会整块搬移地址，
- *    因此绝不能把节点指针直接交给 pthread_create/CreateThread——线程运行期间
- *    该指针可能已经失效。用一个独立于数组、生命周期与线程完全一致的堆对象
- *    来承载入口信息即可规避这一点。
- * 2. 句柄（pthread_t / HANDLE）由创建者在创建成功后写入本结构体，
- *    包装层 _inner_thread_ 通过它即可读到自身句柄与 ID，无需 pthread_self /
- *    GetCurrentThreadId，从而在 Windows 下也能正确拿到「线程自身标识」
- *    （Win32 无法在线程内部直接取得自己的 HANDLE 值）。
- * 3. 线程结束由包装层就地释放本结构体，无需额外回收表。
- */
+// 线程实体参数：堆上分配，作为线程入口的传参结构体。
+//
+// 设计原因：
+// 1. 线程树节点（CCThreadNode）连续存放在 CCDyn 中，扩容/收缩时会整块搬移地址，
+//    因此绝不能把节点指针直接交给 pthread_create/CreateThread——线程运行期间
+//    该指针可能已经失效。用一个独立于数组、生命周期与线程完全一致的堆对象
+//    来承载入口信息即可规避这一点。
+// 2. 句柄（pthread_t / HANDLE）由创建者在创建成功后写入本结构体，
+//    包装层 _inner_thread_ 通过它即可读到自身句柄与 ID，无需 pthread_self /
+//    GetCurrentThreadId，从而在 Windows 下也能正确拿到「线程自身标识」
+//    （Win32 无法在线程内部直接取得自己的 HANDLE 值）。
+// 3. 线程结束由包装层就地释放本结构体，无需额外回收表。
 typedef struct cc_thread_arg
 {
     CCThreadEntry entry; // 用户线程入口
@@ -50,17 +48,15 @@ typedef struct cc_thread_arg
 #endif
 } CCThreadArg;
 
-/*
- * 线程树节点：纯红黑树结构的载体，连续存放在 CCDyn 中，以「下标」而非指针互指。
- *
- * 设计原因：
- * 1. 用动态数组连续存储可提高缓存命中率；但数组扩容会搬移整块内存，
- *    若节点间用指针互指会全部失效，因此 parent/left/right 一律存下标。
- * 2. entry/userData/thread 等实体信息不放在节点里，而是放在 CCThreadArg 中。
- *    节点只保留 key 与树结构字段，两者通过 key（线程 ID）关联，职责单一、避免冗余。
- * 3. 删除节点时采用「末尾节点搬到空位 + 弹尾」的紧凑策略（见 thread_tree_remove_locked），
- *    使 thread_nodes.size / sizeof(CCThreadNode) 恒等于存活线程数，无需额外计数。
- */
+// 线程树节点：纯红黑树结构的载体，连续存放在 CCDyn 中，以「下标」而非指针互指。
+//
+// 设计原因：
+// 1. 用动态数组连续存储可提高缓存命中率；但数组扩容会搬移整块内存，
+//    若节点间用指针互指会全部失效，因此 parent/left/right 一律存下标。
+// 2. entry/userData/thread 等实体信息不放在节点里，而是放在 CCThreadArg 中。
+//    节点只保留 key 与树结构字段，两者通过 key（线程 ID）关联，职责单一、避免冗余。
+// 3. 删除节点时采用「末尾节点搬到空位 + 弹尾」的紧凑策略（见 thread_tree_remove_locked），
+//    使 thread_nodes.size / sizeof(CCThreadNode) 恒等于存活线程数，无需额外计数。
 typedef struct cc_thread
 {
     CCUINTPTR key;   // 线程 ID，与 CCThreadArg.key 一致，用于树比较/检索
@@ -75,7 +71,7 @@ static struct
 {
     CCDyn thread_nodes; // 连续存储线程树节点，提高缓存命中率
     CCUINT32 root;      // 根节点下标（不能存指针：数组扩容会搬移地址）
-// 异步锁，增减线程实体节点的时候使用
+    // 异步锁，增减线程实体节点的时候使用
 #ifdef CC_WINDOWS
     CRITICAL_SECTION thread_tree_lock;
 #else
@@ -300,7 +296,7 @@ static CC_RbtOps thread_tree_ops = {
 // 异步锁实现
 
 // 创建锁
-CCLock cc_create_lock()
+CCLock cc_create_lock(void)
 {
     CCLockInner *pInner = ccalloc(NULL, sizeof(CCLockInner), CC_DBG_REL_TAG("异步锁", NULL));
     if (!pInner)
@@ -354,16 +350,14 @@ void cc_unlock(CCLock lock)
  * ============================================================================
  */
 
-/*
- * 从线程树移除 key 对应节点并回收其槽位（须在锁内调用）。
- *
- * 槽位回收采用「末尾节点搬到空位 + 弹尾」策略：
- * 1. 保持节点在数组中紧凑排列，使 size / sizeof(CCThreadNode) 恒等于存活线程数；
- * 2. 相比 memmove 平移后续所有元素（O(n)，且需逐项修正大量下标），
- *    这里只需修正「指向末尾节点的 3 处引用 + 根」，为 O(1)；
- * 3. 存活节点即便位置改变，其对外身份仍是 key：_inner_thread_ 与 status/wait
- *    全部按 key 定位，从不依赖下标，因此搬移不影响其他正在运行的线程。
- */
+// 从线程树移除 key 对应节点并回收其槽位（须在锁内调用）。
+//
+// 槽位回收采用「末尾节点搬到空位 + 弹尾」策略：
+// 1. 保持节点在数组中紧凑排列，使 size / sizeof(CCThreadNode) 恒等于存活线程数；
+// 2. 相比 memmove 平移后续所有元素（O(n)，且需逐项修正大量下标），
+//    这里只需修正「指向末尾节点的 3 处引用 + 根」，为 O(1)；
+// 3. 存活节点即便位置改变，其对外身份仍是 key：_inner_thread_ 与 status/wait
+//    全部按 key 定位，从不依赖下标，因此搬移不影响其他正在运行的线程。
 static void thread_tree_remove_locked(CCUINTPTR key)
 {
     if (ccthread_var.root == CC_THREAD_NIL)
@@ -404,18 +398,17 @@ static void thread_tree_remove_locked(CCUINTPTR key)
     CCThreadNode tmp;
     cc_dyn_core_pop(
         &ccthread_var.thread_nodes, (CCUINT32)sizeof(CCThreadNode),
-        (CCINT32)sizeof(CCThreadNode), &tmp);
+        (CCINT32)sizeof(CCThreadNode), &tmp
+    );
 }
 
-/*
- * 线程包装层：用户入口不直接作为系统线程入口。
- *
- * 设计原因：
- * 1. 包装层通过传参结构体 CCThreadArg 持有自身入口、用户数据、句柄与 ID，
- *    从而能在入口返回后带锁地把自身节点从线程树摘除并释放传参结构体；
- * 2. 用户入口在锁外执行，避免用户代码中再次调用 cc_thread_status / cc_thread_wait
- *    时发生自锁（内部锁不是递归锁）。
- */
+// 线程包装层：用户入口不直接作为系统线程入口。
+//
+// 设计原因：
+// 1. 包装层通过传参结构体 CCThreadArg 持有自身入口、用户数据、句柄与 ID，
+//    从而能在入口返回后带锁地把自身节点从线程树摘除并释放传参结构体；
+// 2. 用户入口在锁外执行，避免用户代码中再次调用 cc_thread_status / cc_thread_wait
+//    时发生自锁（内部锁不是递归锁）。
 #ifdef CC_WINDOWS
 static DWORD WINAPI _inner_thread_(LPVOID lp)
 #else
@@ -488,7 +481,7 @@ CCThread cc_thread_create(CCThreadEntry entry, void *data)
     // 1. 线程实体参数
     pArg = ccalloc(NULL, sizeof(CCThreadArg), CC_DBG_REL_TAG("线程实体参数", NULL));
     if (!pArg)
-        goto fail_unlock;
+        goto FailedtoUnlock;
     pArg->entry = entry;
     pArg->userData = data;
     pArg->key = 0;
@@ -501,26 +494,29 @@ CCThread cc_thread_create(CCThreadEntry entry, void *data)
         node.left = CC_THREAD_NIL;
         node.right = CC_THREAD_NIL;
         node.is_red = CCFALSE;
-        if (
-            cc_dyn_core_push(&ccthread_var.thread_nodes,
-                             (CCUINT32)sizeof(CCThreadNode),
-                             (CCINT32)sizeof(CCThreadNode), &node) != 0)
-            goto fail_free_arg;
+        if (cc_dyn_core_push(
+                &ccthread_var.thread_nodes,
+                (CCUINT32)sizeof(CCThreadNode),
+                (CCINT32)sizeof(CCThreadNode),
+                &node
+            ) != 0
+        )
+            goto FailedtoFreeArg;
     }
     pNode = node_at(ccthread_var.thread_nodes.size / (CCUINT32)sizeof(CCThreadNode) - 1);
 
-// 3. 持锁创建线程：新线程包装层的首次加锁会阻塞到本函数解锁，
-//    由此保证它读到的句柄/key 已完成初始化，且节点已入树。
+    // 3. 持锁创建线程：新线程包装层的首次加锁会阻塞到本函数解锁，
+    //    由此保证它读到的句柄/key 已完成初始化，且节点已入树。
 #ifdef CC_WINDOWS
     pArg->thread = CreateThread(NULL, 0, _inner_thread_, pArg, 0, NULL);
     if (!pArg->thread)
-        goto fail_pop_node;
+        goto FailedtoPopNode;
     // Windows 的 HANDLE 不等于线程 ID，取 GetThreadId 作为对外 key；
     // 该值在本进程内唯一且与线程一一对应，可直接用作树 key。
     pArg->key = (CCUINTPTR)GetThreadId(pArg->thread);
 #else
     if (pthread_create(&pArg->thread, NULL, _inner_thread_, pArg) != 0)
-        goto fail_pop_node;
+        goto FailedtoPopNode;
     // POSIX 下 pthread_t 本身即可作为线程标识
     pArg->key = (CCUINTPTR)pArg->thread;
 #endif
@@ -528,9 +524,9 @@ CCThread cc_thread_create(CCThreadEntry entry, void *data)
     // 4. 回填 key 并插入线程树
     pNode->key = pArg->key;
     if (cc_rbt_core_insert(&thread_tree_ops, root_node(), pNode) != 0)
-        goto fail_insert;
+        goto FailedtoInsert;
 
-// detach / 关闭句柄：不等待线程结束，资源由包装层收尾
+    // detach / 关闭句柄：不等待线程结束，资源由包装层收尾
 #ifdef CC_WINDOWS
     CloseHandle(pArg->thread);
 #else
@@ -543,7 +539,7 @@ CCThread cc_thread_create(CCThreadEntry entry, void *data)
 
 // 线程已创建且在运行：先解锁等待其结束，再回收数组末尾的孤立节点。
 // pArg 已由包装层自行释放，因此句柄必须在持锁时先取到局部变量再解锁使用。
-fail_insert:
+FailedtoInsert:
 #ifdef CC_WINDOWS
     {
         HANDLE rawThread = pArg->thread;
@@ -563,25 +559,30 @@ fail_insert:
     if (ccthread_var.thread_nodes.size >= sizeof(CCThreadNode))
     {
         CCThreadNode tmp;
-        cc_dyn_core_pop(&ccthread_var.thread_nodes,
-                        (CCUINT32)sizeof(CCThreadNode), (CCINT32)sizeof(CCThreadNode), &tmp);
+        cc_dyn_core_pop(
+            &ccthread_var.thread_nodes,
+            (CCUINT32)sizeof(CCThreadNode),
+            (CCINT32)sizeof(CCThreadNode),
+            &tmp
+        );
     }
     pthread_mutex_unlock(&ccthread_var.thread_tree_lock);
     return 0;
 
 // 线程未创建、节点已追加：摘除节点后继续回收参数
-fail_pop_node:
+FailedtoPopNode:
     {
         CCThreadNode tmp;
         cc_dyn_core_pop(
             &ccthread_var.thread_nodes,
             (CCUINT32)sizeof(CCThreadNode),
             (CCINT32)sizeof(CCThreadNode),
-            &tmp);
+            &tmp
+        );
     }
-fail_free_arg:
+FailedtoFreeArg:
     ccalloc(pArg, 0, NULL);
-fail_unlock:
+FailedtoUnlock:
     pthread_mutex_unlock(&ccthread_var.thread_tree_lock);
     return 0;
 }
@@ -613,8 +614,9 @@ void cc_thread_wait(CCThread thr, CCUINT32 timeOut_us)
     for (;;)
     {
         pthread_mutex_lock(&ccthread_var.thread_tree_lock);
-        CCBOOL alive = ccthread_var.root != CC_THREAD_NIL &&
-                       cc_rbt_core_get(&thread_tree_ops, root_node(), (CCUINTPTR)thr) != NULL;
+        CCBOOL alive =
+            ccthread_var.root != CC_THREAD_NIL &&
+            cc_rbt_core_get(&thread_tree_ops, root_node(), (CCUINTPTR)thr) != NULL;
         pthread_mutex_unlock(&ccthread_var.thread_tree_lock);
 
         // 线程不存在或已结束：直接返回（ID 不存在时不会阻塞）

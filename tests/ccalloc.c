@@ -123,9 +123,8 @@ static CCUINT64 test_meta_total_slots(const CC_MemTestCtx *ctx)
 
     while (seg)
     {
-        CCUINT64 offset = first
-            ? (CCUINT64)(sizeof(CC_SegHeader) + sizeof(CC_MetaAnchor))
-            : (CCUINT64)sizeof(CC_SegHeader);
+        CCUINT64 offset =
+            first ? (CCUINT64)(sizeof(CC_SegHeader) + sizeof(CC_MetaAnchor)) : (CCUINT64)sizeof(CC_SegHeader);
         if ((CCUINT64)CC_MEM_META_SEGMENT_SIZE > offset)
             total += ((CCUINT64)CC_MEM_META_SEGMENT_SIZE - offset) / sizeof(MetaNode);
         first = CCFALSE;
@@ -142,9 +141,8 @@ static CCUINT64 test_flist_total_slots(const CC_MemTestCtx *ctx)
 
     while (seg)
     {
-        CCUINT64 offset = first
-            ? (CCUINT64)(sizeof(CC_SegHeader) + sizeof(CC_FreeAnchor))
-            : (CCUINT64)sizeof(CC_SegHeader);
+        CCUINT64 offset =
+            first ? (CCUINT64)(sizeof(CC_SegHeader) + sizeof(CC_FreeAnchor)) : (CCUINT64)sizeof(CC_SegHeader);
         if ((CCUINT64)CC_MEM_FREELIST_SEGMENT_SIZE > offset)
             total += ((CCUINT64)CC_MEM_FREELIST_SEGMENT_SIZE - offset) / sizeof(FreeListNode);
         first = CCFALSE;
@@ -171,8 +169,14 @@ static CCBOOL test_seg_belongs(const CC_MemTestCtx *ctx, CC_UserSegmentHeader *t
     return CCFALSE;
 }
 
-static CCINT32 test_check_rb(const CC_MemTestCtx *ctx, MetaNode *node, MetaNode *parent,
-                             CCUINTPTR min, CCUINTPTR max, CCUINT64 *count)
+static CCINT32 test_check_rb(
+    const CC_MemTestCtx *ctx,
+    MetaNode *node,
+    MetaNode *parent,
+    CCUINTPTR min,
+    CCUINTPTR max,
+    CCUINT64 *count
+)
 {
     CCUINTPTR key;
     CCUINTPTR start;
@@ -385,8 +389,10 @@ static CCBOOL test_check_all_cb(const CC_MemTestCtx *ctx)
         return CCFALSE;
     }
 
-    black_height = test_check_rb(ctx, test_tree_root(ctx), NULL, 0,
-                                 (CCUINTPTR)-1, &tree_count);
+    black_height = test_check_rb(
+        ctx, test_tree_root(ctx), NULL, 0,
+        (CCUINTPTR)-1, &tree_count
+    );
     if (black_height < 0)
         return CCFALSE;
     if (test_tree_root(ctx) && (test_tree_root(ctx)->flags & CC_META_FLAG_RED))
@@ -454,14 +460,16 @@ static CCBOOL test_count_cb(const CC_MemTestCtx *ctx)
 static void test_basic_alloc(void)
 {
     CC_CASE("ALLOC-BASIC-001", "基础分配与释放");
-    unsigned char *p = NULL;
+    CCUINT8 *p = NULL;
 
     cc_reset();
 
-    p = (unsigned char *)ccalloc(NULL, 1, "one");
+    p = (CCUINT8 *)ccalloc(NULL, 1, "one");
     cc_expect(p != NULL, "基础分配返回非空");
-    cc_expect(get_comment(p) != NULL && strcmp(get_comment(p), "one") == 0,
-              "基础注释可查询");
+    cc_expect(
+        get_comment(p) != NULL && strcmp(get_comment(p), "one") == 0,
+        "基础注释可查询"
+    );
 
     p[0] = 0xA5;
     cc_expect(p[0] == 0xA5, "用户区可读写");
@@ -475,8 +483,10 @@ static void test_basic_alloc(void)
     cc_expect(deinit_ccalloc() == 0, "基础用例无泄漏");
 
     cc_expect(ccalloc(NULL, 64, NULL) == NULL, "未初始化时分配被拒绝");
-    cc_expect(get_comment((void *)(CCUINTPTR)1) == NULL,
-              "未初始化时注释查询返回 NULL");
+    cc_expect(
+        get_comment((void *)(CCUINTPTR)1) == NULL,
+        "未初始化时注释查询返回 NULL"
+    );
     init_ccalloc();
 }
 
@@ -513,13 +523,17 @@ static void test_alignment(void)
     {
         g_align_ptrs[i] = ccalloc(NULL, sizes[i], NULL);
         cc_expect(g_align_ptrs[i] != NULL, "对齐用例分配成功");
-        cc_expect(((CCUINTPTR)g_align_ptrs[i] % (CCUINTPTR)CC_MEM_ALIGN_MIN) == 0,
-                  "返回指针对齐到 CC_MEM_ALIGN_MIN");
+        cc_expect(
+            ((CCUINTPTR)g_align_ptrs[i] % (CCUINTPTR)CC_MEM_ALIGN_MIN) == 0,
+            "返回指针对齐到 CC_MEM_ALIGN_MIN"
+        );
     }
 
     g_check_error = NULL;
-    cc_expect_close(ccalloc_test_check(test_alignment_cb),
-                    "MetaNode.size 按对齐量向上取整");
+    cc_expect_close(
+        ccalloc_test_check(test_alignment_cb),
+        "MetaNode.size 按对齐量向上取整"
+    );
 
     for (CCINT32 i = 0; i < 6; ++i)
         ccalloc(g_align_ptrs[i], 0, NULL);
@@ -532,65 +546,79 @@ static void test_alignment(void)
 static void test_comment(void)
 {
     CC_CASE("ALLOC-COMMENT-001", "注释写入、更新与搬家");
-    unsigned char pattern[64];
+    CCUINT8 pattern[64];
     char old_comment[201];
     char new_comment[221];
-    unsigned char *p = NULL;
-    unsigned char *q = NULL;
-    unsigned char *r = NULL;
-    unsigned char *s = NULL;
-    unsigned char *t = NULL;
-    unsigned char *u = NULL;
-    unsigned char *v = NULL;
+    CCUINT8 *p = NULL;
+    CCUINT8 *q = NULL;
+    CCUINT8 *r = NULL;
+    CCUINT8 *s = NULL;
+    CCUINT8 *t = NULL;
+    CCUINT8 *u = NULL;
+    CCUINT8 *v = NULL;
 
     cc_reset();
 
-    p = (unsigned char *)ccalloc(NULL, 128, "alpha");
-    cc_expect(p != NULL && get_comment(p) && strcmp(get_comment(p), "alpha") == 0,
-              "分配时写入注释");
+    p = (CCUINT8 *)ccalloc(NULL, 128, "alpha");
+    cc_expect(
+        p != NULL && get_comment(p) && strcmp(get_comment(p), "alpha") == 0,
+        "分配时写入注释"
+    );
 
-    q = (unsigned char *)ccalloc(p, 128, "beta");
+    q = (CCUINT8 *)ccalloc(p, 128, "beta");
     cc_expect(q == p, "同尺寸更新注释可原地完成");
-    cc_expect(get_comment(q) && strcmp(get_comment(q), "beta") == 0,
-              "注释更新为最新值");
+    cc_expect(
+        get_comment(q) && strcmp(get_comment(q), "beta") == 0,
+        "注释更新为最新值"
+    );
 
     for (CCINT32 i = 0; i < 64; ++i)
     {
-        pattern[i] = (unsigned char)i;
+        pattern[i] = (CCUINT8)i;
     }
     memcpy(q, pattern, sizeof(pattern));
 
-    r = (unsigned char *)ccalloc(q, 64, NULL);
+    r = (CCUINT8 *)ccalloc(q, 64, NULL);
     cc_expect(r == q, "收缩可原地完成");
-    cc_expect(get_comment(r) && strcmp(get_comment(r), "beta") == 0,
-              "NULL 注释参数保留旧注释");
+    cc_expect(
+        get_comment(r) && strcmp(get_comment(r), "beta") == 0,
+        "NULL 注释参数保留旧注释"
+    );
     cc_expect(memcmp(r, pattern, 64) == 0, "收缩保留用户数据");
 
-    s = (unsigned char *)ccalloc(r, 4096, "gamma");
+    s = (CCUINT8 *)ccalloc(r, 4096, "gamma");
     cc_expect(s != NULL, "扩容分配成功");
     cc_expect(s != r, "扩容触发搬家");
     cc_expect(memcmp(s, pattern, 64) == 0, "搬家扩容保留用户数据");
-    cc_expect(get_comment(s) && strcmp(get_comment(s), "gamma") == 0,
-              "搬家扩容写入新注释");
+    cc_expect(
+        get_comment(s) && strcmp(get_comment(s), "gamma") == 0,
+        "搬家扩容写入新注释"
+    );
     cc_expect(get_comment(r) == NULL, "搬家后旧指针已失效");
 
-    t = (unsigned char *)ccalloc(s, 4096, "delta");
+    t = (CCUINT8 *)ccalloc(s, 4096, "delta");
     cc_expect(t == s, "同尺寸更新注释不搬家");
-    cc_expect(get_comment(t) && strcmp(get_comment(t), "delta") == 0,
-              "同尺寸更新后的注释正确");
+    cc_expect(
+        get_comment(t) && strcmp(get_comment(t), "delta") == 0,
+        "同尺寸更新后的注释正确"
+    );
 
     memset(old_comment, 'A', 200);
     old_comment[200] = '\0';
     memset(new_comment, 'B', 220);
     new_comment[220] = '\0';
 
-    u = (unsigned char *)ccalloc(NULL, 1024, old_comment);
-    v = (unsigned char *)ccalloc(u, 1024, new_comment);
+    u = (CCUINT8 *)ccalloc(NULL, 1024, old_comment);
+    v = (CCUINT8 *)ccalloc(u, 1024, new_comment);
     cc_expect(v == u, "注释增长仍在原槽位内完成");
-    cc_expect(get_comment(v) && strcmp(get_comment(v), new_comment) == 0,
-              "注释增长后的内容正确");
-    cc_expect(get_comment((CCUINT8 *)v + 1) == NULL,
-              "非法指针查询注释返回 NULL");
+    cc_expect(
+        get_comment(v) && strcmp(get_comment(v), new_comment) == 0,
+        "注释增长后的内容正确"
+    );
+    cc_expect(
+        get_comment((CCUINT8 *)v + 1) == NULL,
+        "非法指针查询注释返回 NULL"
+    );
 
     ccalloc(t, 0, NULL);
     ccalloc(v, 0, NULL);
@@ -737,8 +765,10 @@ static void test_free_lists(void)
     }
 
     g_check_error = NULL;
-    cc_expect_close(ccalloc_test_check(test_single_free_cb),
-                    "全部释放后每段空闲链恰为整段");
+    cc_expect_close(
+        ccalloc_test_check(test_single_free_cb),
+        "全部释放后每段空闲链恰为整段"
+    );
     cc_expect_invariants("全部释放后不变式成立");
     cc_read_counts();
     cc_expect(g_user_segments == 1, "空用户段被自动回收");
@@ -811,17 +841,19 @@ static void test_large_and_segments(void)
 {
     CC_CASE("ALLOC-SEGMENT-001", "大块分配与用户段扩容");
     CCUINT64 segments_before = 0;
-    unsigned char *p = NULL;
+    CCUINT8 *p = NULL;
     const CCUINT64 big = ((CCUINT64)2) << 20;
 
     cc_reset();
     cc_read_counts();
     segments_before = g_user_segments;
 
-    p = (unsigned char *)ccalloc(NULL, big, "big");
+    p = (CCUINT8 *)ccalloc(NULL, big, "big");
     cc_expect(p != NULL, "2 MiB 大块分配成功");
-    cc_expect(((CCUINTPTR)p % (CCUINTPTR)CC_MEM_ALIGN_MIN) == 0,
-              "大块指针对齐");
+    cc_expect(
+        ((CCUINTPTR)p % (CCUINTPTR)CC_MEM_ALIGN_MIN) == 0,
+        "大块指针对齐"
+    );
     p[0] = 0x11;
     p[big - 1] = 0x22;
     cc_expect(p[0] == 0x11 && p[big - 1] == 0x22, "大块首尾可写");
@@ -846,28 +878,34 @@ static void test_trim_segments(void)
     CC_CASE("ALLOC-TRIM-001", "整段回收开关");
     CCUINT64 segments_before = 0;
     CCUINT64 segments_grown = 0;
-    unsigned char *p = NULL;
+    CCUINT8 *p = NULL;
     const CCUINT64 big = ((CCUINT64)4) << 20;
 
     cc_reset();
     cc_read_counts();
     segments_before = g_user_segments;
 
-    p = (unsigned char *)ccalloc(NULL, big, NULL);
+    p = (CCUINT8 *)ccalloc(NULL, big, NULL);
     cc_read_counts();
     segments_grown = g_user_segments;
-    cc_expect(p != NULL && segments_grown > segments_before,
-              "扩张用例成功创建新用户段");
+    cc_expect(
+        p != NULL && segments_grown > segments_before,
+        "扩张用例成功创建新用户段"
+    );
 
     ccalloc(p, 0, NULL);
     cc_read_counts();
 
 #if CC_MEM_TRIM_SEGMENTS
-    cc_expect(g_user_segments == segments_before,
-              "CC_MEM_TRIM_SEGMENTS=1 时回收 100% 空闲段");
+    cc_expect(
+        g_user_segments == segments_before,
+        "CC_MEM_TRIM_SEGMENTS=1 时回收 100% 空闲段"
+    );
 #else
-    cc_expect(g_user_segments == segments_grown,
-              "CC_MEM_TRIM_SEGMENTS=0 时保留 100% 空闲段");
+    cc_expect(
+        g_user_segments == segments_grown,
+        "CC_MEM_TRIM_SEGMENTS=0 时保留 100% 空闲段"
+    );
 #endif
 
     cc_expect_invariants("整段回收用例后不变式成立");
@@ -878,44 +916,50 @@ static void test_trim_segments(void)
 static void test_realloc_variants(void)
 {
     CC_CASE("ALLOC-REALLOC-001", "调整变体");
-    unsigned char pattern[1024];
-    unsigned char *p = NULL;
-    unsigned char *q = NULL;
-    unsigned char *r = NULL;
-    unsigned char *s = NULL;
-    unsigned char *t = NULL;
+    CCUINT8 pattern[1024];
+    CCUINT8 *p = NULL;
+    CCUINT8 *q = NULL;
+    CCUINT8 *r = NULL;
+    CCUINT8 *s = NULL;
+    CCUINT8 *t = NULL;
 
     cc_reset();
 
     for (CCINT32 i = 0; i < 1024; ++i)
-        pattern[i] = (unsigned char)(i & 0xFF);
+        pattern[i] = (CCUINT8)(i & 0xFF);
 
     // 原地收缩
-    p = (unsigned char *)ccalloc(NULL, 4096, "keep");
+    p = (CCUINT8 *)ccalloc(NULL, 4096, "keep");
     cc_expect(p != NULL, "调整用例初始分配成功");
     memcpy(p, pattern, sizeof(pattern));
 
-    q = (unsigned char *)ccalloc(p, 1024, NULL);
+    q = (CCUINT8 *)ccalloc(p, 1024, NULL);
     cc_expect(q == p, "缩小尺寸原地完成");
     cc_expect(memcmp(q, pattern, sizeof(pattern)) == 0, "原地收缩保留数据");
-    cc_expect(get_comment(q) && strcmp(get_comment(q), "keep") == 0,
-              "原地收缩保留注释");
+    cc_expect(
+        get_comment(q) && strcmp(get_comment(q), "keep") == 0,
+        "原地收缩保留注释"
+    );
 
     // 搬家扩容
-    r = (unsigned char *)ccalloc(q, 16384, "grown");
+    r = (CCUINT8 *)ccalloc(q, 16384, "grown");
     cc_expect(r != NULL, "搬家扩容成功");
     cc_expect(r != q, "扩容超出原槽位时触发搬家");
     cc_expect(memcmp(r, pattern, sizeof(pattern)) == 0, "搬家扩容保留数据");
-    cc_expect(get_comment(r) && strcmp(get_comment(r), "grown") == 0,
-              "搬家扩容更新注释");
+    cc_expect(
+        get_comment(r) && strcmp(get_comment(r), "grown") == 0,
+        "搬家扩容更新注释"
+    );
     cc_expect(get_comment(q) == NULL, "搬家扩容后旧指针失效");
 
     // 极端收缩：注释需整体搬移到新用户区尾部
-    s = (unsigned char *)ccalloc(NULL, 200, "tiny");
-    t = (unsigned char *)ccalloc(s, 1, NULL);
+    s = (CCUINT8 *)ccalloc(NULL, 200, "tiny");
+    t = (CCUINT8 *)ccalloc(s, 1, NULL);
     cc_expect(t == s, "极端收缩仍可原地完成");
-    cc_expect(get_comment(t) && strcmp(get_comment(t), "tiny") == 0,
-              "极端收缩后注释仍可查询");
+    cc_expect(
+        get_comment(t) && strcmp(get_comment(t), "tiny") == 0,
+        "极端收缩后注释仍可查询"
+    );
 
     ccalloc(r, 0, NULL);
     ccalloc(t, 0, NULL);
@@ -934,29 +978,39 @@ static void test_realloc_variants(void)
 static void test_invalid_free(void)
 {
     CC_CASE("ALLOC-INVALID-001", "非法释放与 double-free");
-    char *p = NULL;
-    char *q = NULL;
+    CCUINT8 *p = NULL;
+    CCUINT8 *q = NULL;
 
     cc_reset();
 
-    p = (char *)ccalloc(NULL, 64, "ok");
+    p = (CCUINT8 *)ccalloc(NULL, 64, "ok");
     cc_expect(p != NULL, "非法释放用例初始分配成功");
 
-    cc_expect(ccalloc((CCUINT8 *)p + 1, 0, NULL) == NULL,
-              "free(p + 1) 被拒绝");
-    cc_expect(ccalloc((CCUINT8 *)p + 1, 128, NULL) == NULL,
-              "非法调整被拒绝");
-    cc_expect(ccalloc((void *)(CCUINTPTR)0x1234, 0, NULL) == NULL,
-              "随机地址释放被拒绝");
-    cc_expect(get_comment(p) && strcmp(get_comment(p), "ok") == 0,
-              "非法释放未破坏原分配");
+    cc_expect(
+        ccalloc(p + 1, 0, NULL) == NULL,
+        "free(p + 1) 被拒绝"
+    );
+    cc_expect(
+        ccalloc(p + 1, 128, NULL) == NULL,
+        "非法调整被拒绝"
+    );
+    cc_expect(
+        ccalloc((void *)(CCUINTPTR)0x1234, 0, NULL) == NULL,
+        "随机地址释放被拒绝"
+    );
+    cc_expect(
+        get_comment(p) && strcmp(get_comment(p), "ok") == 0,
+        "非法释放未破坏原分配"
+    );
 
     cc_expect(ccalloc(p, 0, NULL) == NULL, "合法释放返回 NULL");
     cc_expect(ccalloc(p, 0, NULL) == NULL, "double-free 被拒绝");
 
-    q = (char *)ccalloc(NULL, 64, "after");
-    cc_expect(q != NULL && get_comment(q) && strcmp(get_comment(q), "after") == 0,
-              "非法释放后分配器仍可用");
+    q = (CCUINT8 *)ccalloc(NULL, 64, "after");
+    cc_expect(
+        q != NULL && get_comment(q) && strcmp(get_comment(q), "after") == 0,
+        "非法释放后分配器仍可用"
+    );
     ccalloc(q, 0, NULL);
 
     cc_expect_invariants("非法释放用例后不变式成立");
@@ -975,11 +1029,15 @@ static void test_protection_smoke(void)
     cc_expect(p != NULL, "页保护用例初始分配成功");
 
     g_check_error = NULL;
-    cc_expect_close(ccalloc_test_check(test_check_all_cb),
-                    "页保护下测试回调可访问并校验元数据");
+    cc_expect_close(
+        ccalloc_test_check(test_check_all_cb),
+        "页保护下测试回调可访问并校验元数据"
+    );
 
-    cc_expect(get_comment(p) && strcmp(get_comment(p), "guard") == 0,
-              "页保护下公开查询正常");
+    cc_expect(
+        get_comment(p) && strcmp(get_comment(p), "guard") == 0,
+        "页保护下公开查询正常"
+    );
 
     ccalloc(p, 0, NULL);
     cc_expect(deinit_ccalloc() == 0, "页保护用例无泄漏");
@@ -1030,7 +1088,8 @@ static void test_random_stress(void)
     CCUINT32 seed = cc_test_seed();
     CCBOOL ok = CCTRUE;
 
-    if (!seed) seed = 0x9E3779B9u;
+    if (!seed)
+        seed = 0x9E3779B9u;
 
     cc_reset();
     memset(ptrs, 0, sizeof(ptrs));
@@ -1070,7 +1129,7 @@ static void test_random_stress(void)
                 break;
             }
 
-            ((unsigned char *)p)[0] = 0x5A;
+            ((CCUINT8 *)p)[0] = 0x5A;
             ptrs[live] = p;
             sizes[live] = size;
             live++;
@@ -1099,7 +1158,7 @@ static void test_random_stress(void)
                     break;
                 }
                 // 用户区首字节在任意尺寸下都应保留
-                if (((unsigned char *)np)[0] != 0x5A)
+                if (((CCUINT8 *)np)[0] != 0x5A)
                 {
                     ok = CCFALSE;
                     break;
@@ -1107,7 +1166,7 @@ static void test_random_stress(void)
 
                 ptrs[index] = np;
                 sizes[index] = new_size;
-                ((unsigned char *)np)[0] = 0x5A;
+                ((CCUINT8 *)np)[0] = 0x5A;
             }
         }
 
@@ -1120,8 +1179,10 @@ static void test_random_stress(void)
 
     cc_expect(ok, "随机压力操作无异常");
     if (!ok && g_check_error)
-        color_print(CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
-            "[ccalloc] 压力测试中止原因：%s\n", g_check_error);
+        color_print(
+            CC_TEXT_COLOR(CC_RED, CC_DEFAULT)
+            "[ccalloc] 压力测试中止原因：%s\n", g_check_error
+        );
 
     for (CCINT32 i = 0; i < live; ++i)
         ccalloc(ptrs[i], 0, NULL);
@@ -1148,7 +1209,7 @@ void test_ccalloc(void)
      */
     _deinit_crystal_std_();
     init_console();
-    
+
     test_basic_alloc();
     test_alignment();
     test_comment();
@@ -1162,7 +1223,7 @@ void test_ccalloc(void)
     test_protection_smoke();
     test_leak_detection();
     test_random_stress();
-    
-    /* 重新初始化 */
+
+    // 重新初始化
     _init_crystal_std_();
 }

@@ -15,14 +15,22 @@
 #include <cc_wildcard.h>
 #include <color_print.h>
 #include <cctime.h>
+#include <ccpath.h>
+#include <cc_encoding.h>
+#include <cchost.h>
 #include <ccfiles.h>
+#include <cc_hash.h>
 #include <ccnet.h>
 
 #include "test_harness.h"
 
-/* 七个进程内套件；每个套件内部用 CC_CASE 显式标记用例编号。 */
+// 各进程内套件；每个套件内部用 CC_CASE 显式标记用例编号。
 void test_basic(void);
 void test_color_print(void);
+void test_ccpath(void);
+void test_cc_encoding(void);
+void test_cchost(void);
+void test_cc_hash(void);
 void test_rbt_core(void);
 void test_dyn_core(void);
 void test_ccalloc(void);
@@ -30,7 +38,7 @@ void test_thread(void);
 void test_ccfiles(void);
 void test_ccnet(void);
 
-/* 人工确认项：只在交互终端中、全部自动套件之后运行。 */
+// 人工确认项：只在交互终端中、全部自动套件之后运行。
 void test_manual(void);
 
 #endif

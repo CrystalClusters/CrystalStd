@@ -33,7 +33,7 @@ CCINT32 ccfiles_create_dir(CCFiles *fs, const char *v_path)
         return r;
     }
 
-    /* 已存在（文件或目录）即冲突，对齐 shell mkdir */
+    // 已存在（文件或目录）即冲突，对齐 shell mkdir
     if (idx != CC_FS_NIL)
     {
         fs_buf_free(&leaf);
@@ -59,7 +59,7 @@ CCINT32 ccfiles_create_dir(CCFiles *fs, const char *v_path)
         return CC_FS_ERR_NOSPACE;
     }
 
-    /* 立即创建物理目录（含缺失的上级）；失败则回滚虚拟节点，不留下假象 */
+    // 立即创建物理目录（含缺失的上级）；失败则回滚虚拟节点，不留下假象
     char *phys = fs_physical_dup(idx, CC_DBG_REL_TAG("目录物理路径", NULL));
     CCINT32 mr = phys ? fs_mkdirs(phys) : CC_FS_ERR_NOSPACE;
     if (phys)
@@ -130,7 +130,7 @@ CCINT32 ccfiles_create_file(CCFiles *fs, const char *v_path)
             return CC_FS_ERR_NOSPACE;
         }
 
-        /* 立即创建物理文件（连同上级目录）；"ab" 保证同名已存在文件不被截断 */
+        // 立即创建物理文件（连同上级目录）；"ab" 保证同名已存在文件不被截断
         char *pp = fs_physical_dup(parent, CC_DBG_REL_TAG("父目录物理路径", NULL));
         CCINT32 mr = pp ? fs_mkdirs(pp) : CC_FS_ERR_NOSPACE;
         if (pp)
@@ -188,7 +188,7 @@ CCINT32 ccfiles_remove(CCFiles *fs, const char *v_path)
 {
     if (!fs || !v_path)
         return CC_FS_ERR_PARAM;
-    /* 结构操作前先关闭 / 落盘所有常驻句柄（Windows 下打开中的文件删不掉） */
+    // 结构操作前先关闭 / 落盘所有常驻句柄（Windows 下打开中的文件删不掉）
     fs_fh_close_all();
     CCUINT32 idx = CC_FS_NIL;
     CCINT32 r = fs_vwalk(fs, v_path, CCTRUE, NULL, NULL, &idx);
@@ -209,12 +209,12 @@ CCINT32 ccfiles_remove(CCFiles *fs, const char *v_path)
     if (parent == CC_FS_NIL)
         return CC_FS_ERR_NOENT;
 
-    /* 立即删除物理实体；失败则保留虚拟节点，绝不返回假成功 */
+    // 立即删除物理实体；失败则保留虚拟节点，绝不返回假成功
     CCINT32 pr = fs_physical_delete(idx);
     if (pr != CC_FS_OK)
         return pr;
 
-    /* fs_remove_child 内部可能改写节点 name，先做副本；探针失效在其中统一处理 */
+    // fs_remove_child 内部可能改写节点 name，先做副本；探针失效在其中统一处理
     char *nm = fs_strdup(n->name, CC_DBG_REL_TAG("删除节点名称", NULL));
     if (!nm)
         return CC_FS_ERR_NOSPACE;
@@ -223,17 +223,17 @@ CCINT32 ccfiles_remove(CCFiles *fs, const char *v_path)
     return ret;
 }
 
-/* rm -rf：递归删除任意子树，物理删除即刻生效；路径不存在返回 OK（-f） */
+// rm -rf：递归删除任意子树，物理删除即刻生效；路径不存在返回 OK（-f）
 CCINT32 ccfiles_remove_recursive(CCFiles *fs, const char *v_path)
 {
     if (!fs || !v_path)
         return CC_FS_ERR_PARAM;
-    /* 结构操作前先关闭 / 落盘所有常驻句柄 */
+    // 结构操作前先关闭 / 落盘所有常驻句柄
     fs_fh_close_all();
     CCUINT32 idx = CC_FS_NIL;
     CCINT32 r = fs_vwalk(fs, v_path, CCTRUE, NULL, NULL, &idx);
     if (r == CC_FS_ERR_NOENT)
-        return CC_FS_OK; /* -f：不存在也算成功 */
+        return CC_FS_OK; // -f：不存在也算成功
     if (r != CC_FS_OK)
         return r;
     if (idx == CC_FS_NIL)
@@ -242,20 +242,20 @@ CCINT32 ccfiles_remove_recursive(CCFiles *fs, const char *v_path)
     if (idx != ccfiles_var.root && fs_is_protected(idx))
         return CC_FS_ERR_PROTECT;
 
-    /* 探针失效由 fs_delete_subtree_ex → fs_remove_child 内的 fs_invalidate_probes 统一处理 */
+    // 探针失效由 fs_delete_subtree_ex → fs_remove_child 内的 fs_invalidate_probes 统一处理
 
     if (idx == ccfiles_var.root)
     {
-        /* rm -rf /：一次性收集并删除根的所有后代（物理即刻删除），
-           保留根节点与根锚点目录本身；避免逐子树删除时 swap-remove 相互搬移下标 */
+        // rm -rf /：一次性收集并删除根的所有后代（物理即刻删除），
+        // 保留根节点与根锚点目录本身；避免逐子树删除时 swap-remove 相互搬移下标
         return fs_delete_children(idx, CCTRUE);
     }
 
     return fs_delete_subtree_ex(idx, CCTRUE);
 }
 
-/* 确保节点的物理文件存在（含上级目录）；已存在则保持内容不变。
-   cp / mv 的目标节点是纯虚拟新建，需要先落一个空文件才能打开写句柄。 */
+// 确保节点的物理文件存在（含上级目录）；已存在则保持内容不变。
+// cp / mv 的目标节点是纯虚拟新建，需要先落一个空文件才能打开写句柄。
 static CCINT32 fs_ensure_physical_file(CCUINT32 idx)
 {
     CCFsNode *n = node_at(idx);
@@ -287,7 +287,7 @@ static CCINT32 fs_ensure_physical_file(CCUINT32 idx)
     }
     if (ret == CC_FS_OK)
     {
-        FILE *fp = fopen(phys, "ab"); /* 不截断：只保证存在 */
+        FILE *fp = fopen(phys, "ab"); // 不截断：只保证存在
         if (!fp)
             ret = CC_FS_ERR_IO;
         else
@@ -297,13 +297,13 @@ static CCINT32 fs_ensure_physical_file(CCUINT32 idx)
     return ret;
 }
 
-/* 复制文件内容：逐块读源、直写目标；目标旧内容先截断，避免残留尾部 */
+// 复制文件内容：逐块读源、直写目标；目标旧内容先截断，避免残留尾部
 static CCINT32 fs_copy_file(CCUINT32 src_idx, CCUINT32 dst_idx)
 {
     CCUINT64 total = node_at(src_idx)->size;
 
-    /* 源实物必须先可读：否则下面截断目标后才发现失败，会丢掉目标旧数据。
-       包内文件走 pack 偏移读取，没有独立物理路径，跳过此检查。 */
+    // 源实物必须先可读：否则下面截断目标后才发现失败，会丢掉目标旧数据。
+    // 包内文件走 pack 偏移读取，没有独立物理路径，跳过此检查。
     CCUINT32 src_anchor = fs_find_anchor(src_idx);
     CCBOOL need_phys = (src_anchor != CC_FS_NIL && node_at(src_anchor)->mount &&
                         node_at(src_anchor)->mount->origin != FS_ORIGIN_PKG);
@@ -350,16 +350,20 @@ static CCINT32 fs_copy_file(CCUINT32 src_idx, CCUINT32 dst_idx)
 
     node_at(dst_idx)->crc32 = node_at(src_idx)->crc32;
     node_at(dst_idx)->mtime = fs_now_seconds();
-    /* 复制目标通常没有探针指向：立即落盘并关闭；源句柄同样按需释放 */
+    // 复制目标通常没有探针指向：立即落盘并关闭；源句柄同样按需释放
     CCINT32 fr = fs_fh_close(dst_idx);
     fs_fh_release_if_unused(src_idx);
     return fr;
 }
 
-/* 递归复制：把 src 复制为 parent 下名为 name 的节点 */
-/* 复制单个节点（不处理其子节点）；成功时 out_dst 为目标下标 */
-static CCINT32 fs_copy_one(CCUINT32 src_idx, CCUINT32 parent_idx,
-                           const char *name, CCUINT32 *out_dst)
+// 递归复制：把 src 复制为 parent 下名为 name 的节点
+// 复制单个节点（不处理其子节点）；成功时 out_dst 为目标下标
+static CCINT32 fs_copy_one(
+    CCUINT32 src_idx,
+    CCUINT32 parent_idx,
+    const char *name,
+    CCUINT32 *out_dst
+)
 {
     *out_dst = CC_FS_NIL;
     CCBOOL src_is_dir = (node_at(src_idx)->type == CC_FS_TYPE_DIR);
@@ -384,7 +388,7 @@ static CCINT32 fs_copy_one(CCUINT32 src_idx, CCUINT32 parent_idx,
             }
         }
 
-        /* 目录同样立即落盘（空目录也必须真实存在） */
+        // 目录同样立即落盘（空目录也必须真实存在）
         char *dphys = fs_physical_dup(dst, CC_DBG_REL_TAG("目录物理路径", NULL));
         if (!dphys)
             return CC_FS_ERR_NOSPACE;
@@ -427,7 +431,7 @@ typedef struct cc_fs_copy_item
     char *name;
 } CCFsCopyItem;
 
-/* 复制整棵子树为 parent 下名为 name 的节点；显式栈迭代，无递归 */
+// 复制整棵子树为 parent 下名为 name 的节点；显式栈迭代，无递归
 static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *name)
 {
     CCDyn stack;
@@ -440,8 +444,11 @@ static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *n
     item.src = src_idx;
     item.parent = parent_idx;
     item.name = root_name;
-    if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCFsCopyItem),
-                         (CCINT32)sizeof(CCFsCopyItem), &item) != 0)
+    if (cc_dyn_core_push(
+            &stack, (CCUINT32)sizeof(CCFsCopyItem),
+            (CCINT32)sizeof(CCFsCopyItem), &item
+        ) != 0
+    )
     {
         ccalloc(root_name, 0, NULL);
         fs_buf_free(&stack);
@@ -452,8 +459,11 @@ static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *n
     while (stack.size >= (CCUINT32)sizeof(CCFsCopyItem))
     {
         CCFsCopyItem cur;
-        if (cc_dyn_core_pop(&stack, (CCUINT32)sizeof(CCFsCopyItem),
-                            (CCINT32)sizeof(CCFsCopyItem), &cur) != 0)
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCFsCopyItem),
+                (CCINT32)sizeof(CCFsCopyItem), &cur
+            ) != 0
+        )
             break;
 
         CCUINT32 dst = CC_FS_NIL;
@@ -473,8 +483,10 @@ static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *n
         for (CCUINT32 i = 0; i < count; i++)
         {
             CCUINT32 kid = arr[i];
-            char *kn = fs_strdup(node_at(kid)->name,
-                                 CC_DBG_REL_TAG("复制节点名称", NULL));
+            char *kn = fs_strdup(
+                node_at(kid)->name,
+                CC_DBG_REL_TAG("复制节点名称", NULL)
+            );
             if (!kn)
             {
                 ret = CC_FS_ERR_NOSPACE;
@@ -484,8 +496,11 @@ static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *n
             child.src = kid;
             child.parent = dst;
             child.name = kn;
-            if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCFsCopyItem),
-                                 (CCINT32)sizeof(CCFsCopyItem), &child) != 0)
+            if (cc_dyn_core_push(
+                    &stack, (CCUINT32)sizeof(CCFsCopyItem),
+                    (CCINT32)sizeof(CCFsCopyItem), &child
+                ) != 0
+            )
             {
                 ccalloc(kn, 0, NULL);
                 ret = CC_FS_ERR_NOSPACE;
@@ -502,9 +517,15 @@ static CCINT32 fs_copy_tree(CCUINT32 src_idx, CCUINT32 parent_idx, const char *n
     return ret;
 }
 
-/* 计算 cp / mv 的目标父目录与名称 */
-static CCINT32 fs_target_of(CCUINT32 src_idx, CCUINT32 dst_idx, CCUINT32 dst_parent,
-                            const char *leaf, CCUINT32 *out_parent, CCDyn *out_name)
+// 计算 cp / mv 的目标父目录与名称
+static CCINT32 fs_target_of(
+    CCUINT32 src_idx,
+    CCUINT32 dst_idx,
+    CCUINT32 dst_parent,
+    const char *leaf,
+    CCUINT32 *out_parent,
+    CCDyn *out_name
+)
 {
     const char *name = leaf;
     CCUINT32 parent = dst_parent;
@@ -534,7 +555,7 @@ static CCINT32 fs_target_of(CCUINT32 src_idx, CCUINT32 dst_idx, CCUINT32 dst_par
     return CC_FS_OK;
 }
 
-/* 目标父目录是否位于 ancestor 子树内部（禁止把目录复制进自身） */
+// 目标父目录是否位于 ancestor 子树内部（禁止把目录复制进自身）
 static CCBOOL fs_is_inside(CCUINT32 node_idx, CCUINT32 ancestor_idx)
 {
     CCUINT32 cur = node_idx;
@@ -547,14 +568,14 @@ static CCBOOL fs_is_inside(CCUINT32 node_idx, CCUINT32 ancestor_idx)
     return CCFALSE;
 }
 
-/* 同锚点原子移动：物理 rename，虚拟层重建目标投影。
-   前置条件由调用方保证：源为磁盘投影节点、目标父目录物理存在、同锚点、均非保护。 */
+// 同锚点原子移动：物理 rename，虚拟层重建目标投影。
+// 前置条件由调用方保证：源为磁盘投影节点、目标父目录物理存在、同锚点、均非保护。
 static CCINT32 fs_mv_atomic(CCUINT32 src_idx, CCUINT32 parent, const char *name)
 {
     CCFsNode *src = node_at(src_idx);
     CCBOOL src_is_dir = (src->type == CC_FS_TYPE_DIR);
 
-    /* 物理身份即将改变（含子树内所有文件）：先落盘并关闭全部常驻句柄 */
+    // 物理身份即将改变（含子树内所有文件）：先落盘并关闭全部常驻句柄
     fs_fh_close_all();
 
     char *src_phys = fs_physical_dup(src_idx, CC_DBG_REL_TAG("移动源路径", NULL));
@@ -582,7 +603,7 @@ static CCINT32 fs_mv_atomic(CCUINT32 src_idx, CCUINT32 parent, const char *name)
     const char *dstp_str = fs_buf_str(&dstp);
     CCINT32 r = CC_FS_OK;
 
-    /* 源实物已不存在时不要先动目标，否则 rename 失败会直接丢掉目标数据 */
+    // 源实物已不存在时不要先动目标，否则 rename 失败会直接丢掉目标数据
     if (!fs_file_exists(src_phys) && !fs_is_dir_path(src_phys) &&
         !fs_is_link_path(src_phys))
     {
@@ -592,7 +613,7 @@ static CCINT32 fs_mv_atomic(CCUINT32 src_idx, CCUINT32 parent, const char *name)
         return CC_FS_ERR_NOENT;
     }
 
-    /* 覆盖目标时先改名到同目录备份；源 rename 失败则用备份恢复目标 */
+    // 覆盖目标时先改名到同目录备份；源 rename 失败则用备份恢复目标
     CCDyn bak;
     memset(&bak, 0, sizeof(bak));
     CCBOOL use_bak = CCFALSE;
@@ -646,7 +667,7 @@ static CCINT32 fs_mv_atomic(CCUINT32 src_idx, CCUINT32 parent, const char *name)
     r = fs_rename_path(src_phys, dstp_str);
     if (r != CC_FS_OK)
     {
-        /* 恢复旧目标；恢复也失败时保留备份，至少不丢数据 */
+        // 恢复旧目标；恢复也失败时保留备份，至少不丢数据
         if (use_bak &&
             fs_rename_path(fs_buf_str(&bak), dstp_str) != CC_FS_OK)
             r = CC_FS_ERR_IO;
@@ -657,22 +678,24 @@ static CCINT32 fs_mv_atomic(CCUINT32 src_idx, CCUINT32 parent, const char *name)
         return r;
     }
 
-    /* 新目标已就位，旧目标备份只做尽力清理；失败不影响本次移动结果 */
+    // 新目标已就位，旧目标备份只做尽力清理；失败不影响本次移动结果
     if (use_bak)
         (void)fs_remove_tree(fs_buf_str(&bak));
     fs_buf_free(&bak);
     ccalloc(src_phys, 0, NULL);
     ccalloc(parent_phys, 0, NULL);
 
-    /* 虚拟层：删除源虚拟节点（不删物理，物理已 rename 走）；删除旧目标虚拟；重建投影 */
+    // 虚拟层：删除源虚拟节点（不删物理，物理已 rename 走）；删除旧目标虚拟；重建投影
     fs_delete_subtree(src_idx);
 
     CCUINT32 existing = fs_child_get_idx(parent, name);
     if (existing != CC_FS_NIL)
         fs_remove_child(parent, name);
 
-    CCUINT32 dst = fs_create_node(parent, name,
-                                  src_is_dir ? CC_FS_TYPE_DIR : CC_FS_TYPE_FILE, NULL, 0, FS_ORIGIN_DISK);
+    CCUINT32 dst = fs_create_node(
+        parent, name,
+        src_is_dir ? CC_FS_TYPE_DIR : CC_FS_TYPE_FILE, NULL, 0, FS_ORIGIN_DISK
+    );
     if (dst == CC_FS_NIL)
     {
         fs_buf_free(&dstp);
@@ -776,7 +799,7 @@ CCINT32 ccfiles_mv(CCFiles *fs, const char *src, const char *dst)
 {
     if (!fs || !src || !dst)
         return CC_FS_ERR_PARAM;
-    /* 物理身份即将改变：先落盘并关闭全部常驻句柄 */
+    // 物理身份即将改变：先落盘并关闭全部常驻句柄
     fs_fh_close_all();
 
     CCUINT32 src_idx = CC_FS_NIL;
@@ -834,7 +857,7 @@ CCINT32 ccfiles_mv(CCFiles *fs, const char *src, const char *dst)
         return CC_FS_OK;
     }
 
-    /* 同锚点 + 源为磁盘投影 + 目标父目录物理存在 → 原子 rename；否则 copy + 删源 */
+    // 同锚点 + 源为磁盘投影 + 目标父目录物理存在 → 原子 rename；否则 copy + 删源
     CCUINT32 src_anchor = fs_find_anchor(src_idx);
     CCUINT32 dst_anchor = fs_find_anchor(parent);
     CCBOOL atomic_ok = (node_at(src_idx)->mount &&
@@ -862,11 +885,11 @@ CCINT32 ccfiles_mv(CCFiles *fs, const char *src, const char *dst)
     if (r != CC_FS_OK)
         return r;
 
-    /* 探针失效由删源路径（fs_delete_subtree_ex / fs_mv_atomic 的 fs_delete_subtree）统一处理 */
+    // 探针失效由删源路径（fs_delete_subtree_ex / fs_mv_atomic 的 fs_delete_subtree）统一处理
 
     if (!atomic_ok)
     {
-        /* 跨锚点：删源虚拟节点 + 立即删除源物理实体（内容已写入目标） */
+        // 跨锚点：删源虚拟节点 + 立即删除源物理实体（内容已写入目标）
         fs_delete_subtree_ex(src_idx, CCTRUE);
     }
     return CC_FS_OK;

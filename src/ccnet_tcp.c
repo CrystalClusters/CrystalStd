@@ -18,6 +18,7 @@ static CCINT32 _fill_addrs(CCNetCtx *ctx)
     struct sockaddr_storage ss;
     CCNetSockLen len;
 
+    // len 为传入容量 / 传出实际长度，每次调用前都要重置为缓冲区大小
     len = (CCNetSockLen)sizeof(ss);
     if (getsockname(ctx->sock, (struct sockaddr *)&ss, &len) == 0)
         _ccnet_addr_from_sock(&ctx->local, (struct sockaddr *)&ss, len);
@@ -63,7 +64,7 @@ static CCINT32 _connect_addr(CCNetSocket sock, const CCNetAddr *addr, CCUINT32 t
             rc = _ccnet_poll(sock, CCTRUE, time_out_us);
             if (rc == CC_NET_OK)
             {
-                int so_error = 0;
+                int so_error = 0;   // getsockopt 的 SO_ERROR 输出：两种平台均为 int
                 CCNetSockLen so_len = (CCNetSockLen)sizeof(so_error);
                 if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&so_error, &so_len) != 0)
                     rc = _ccnet_map_os(_ccnet_last_error());
@@ -103,8 +104,11 @@ CCINT32 _ccnet_tcp_setup(CCNetStart *start, CCNetCtx *ctx)
     if (!_ccnet_ready())
         return CC_NET_ERR_IO;
 
-    sock = socket(start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6,
-                  SOCK_STREAM, 0);
+    // 地址族直接来自已校验的 CCNetAddr，不经过 getaddrinfo
+    sock = socket(
+        start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6,
+        SOCK_STREAM, 0
+    );
     if (sock == CC_NET_SOCK_INVALID)
         return _ccnet_map_os(_ccnet_last_error());
 
@@ -128,7 +132,7 @@ CCINT32 _ccnet_listen_setup(CCNetStart *start, CCNetCtx *ctx)
     struct sockaddr_storage ss;
     CCNetSockLen len;
     CCINT32 rc;
-    int opt = 1;
+    int opt = 1;    // setsockopt 的开关量 optval 按接口约定为 int
 
     if (!start || !ctx)
         return CC_NET_ERR_PARAM;
@@ -138,13 +142,20 @@ CCINT32 _ccnet_listen_setup(CCNetStart *start, CCNetCtx *ctx)
     if (!_ccnet_ready())
         return CC_NET_ERR_IO;
 
-    sock = socket(start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6, SOCK_STREAM, 0);
+    sock = socket(
+        start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6,
+        SOCK_STREAM, 0
+    );
     if (sock == CC_NET_SOCK_INVALID)
         return _ccnet_map_os(_ccnet_last_error());
 
     if (start->addr.family == CC_NET_AF_INET6)
     {
-        if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&opt, sizeof(opt)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_IPV6, IPV6_V6ONLY,
+                (const char *)&opt, sizeof(opt)
+            ) != 0
+        )
         {
             rc = _ccnet_map_os(_ccnet_last_error());
             _ccnet_sock_close(sock);
@@ -263,6 +274,7 @@ static CCINT32 _tcp_accept(void *ctx, CCNetTcpEntry entry, void *user, CCUINT32 
 static CCINT32 _tcp_state(void *ctx, CCNetState *out)
 {
     CCNetCtx *inner = (CCNetCtx *)ctx;
+
     if (!inner || !out)
         return CC_NET_ERR_PARAM;
     *out = (CCNetState)atomic_load_explicit(&inner->state, memory_order_acquire);
@@ -272,6 +284,7 @@ static CCINT32 _tcp_state(void *ctx, CCNetState *out)
 static CCINT32 _tcp_local(void *ctx, CCNetAddr *out)
 {
     CCNetCtx *inner = (CCNetCtx *)ctx;
+
     if (!inner || !out)
         return CC_NET_ERR_PARAM;
     *out = inner->local;
@@ -281,6 +294,7 @@ static CCINT32 _tcp_local(void *ctx, CCNetAddr *out)
 static CCINT32 _tcp_peer(void *ctx, CCNetAddr *out)
 {
     CCNetCtx *inner = (CCNetCtx *)ctx;
+
     if (!inner || !out)
         return CC_NET_ERR_PARAM;
     *out = inner->peer;
@@ -292,7 +306,7 @@ static CCINT64 _tcp_send(void *ctx, const void *data, CCUINT64 size, CCUINT32 ti
     CCNetCtx *inner = (CCNetCtx *)ctx;
     CCINT32 rc;
     CCINT32 os_err;
-    int sent;
+    int sent;       // send 的返回值：Winsock 为 int，POSIX 为 ssize_t，此处统一按 int 保存
 
     if (!inner || (size != 0 && !data))
         return CC_NET_ERR_PARAM;
@@ -307,6 +321,7 @@ static CCINT64 _tcp_send(void *ctx, const void *data, CCUINT64 size, CCUINT32 ti
         return rc;
 
 #ifdef CC_WINDOWS
+    // 长度参数按 Winsock 约定为 int；数据超过 int 上限时取 0x7FFFFFFF
     sent = send(inner->sock, (const char *)data, size > 0x7FFFFFFFull ? 0x7FFFFFFF : (int)size, 0);
 #else
     sent = (int)send(inner->sock, data, (size_t)size, MSG_NOSIGNAL);
@@ -330,7 +345,7 @@ static CCINT64 _tcp_recv(void *ctx, void *buf, CCUINT64 cap, CCUINT32 timeOut_us
     CCNetCtx *inner = (CCNetCtx *)ctx;
     CCINT32 rc;
     CCINT32 os_err;
-    int got;
+    int got;        // recv 的返回值：Winsock 为 int，POSIX 为 ssize_t，此处统一按 int 保存
 
     if (!inner || !buf || cap == 0)
         return CC_NET_ERR_PARAM;
@@ -343,6 +358,7 @@ static CCINT64 _tcp_recv(void *ctx, void *buf, CCUINT64 cap, CCUINT32 timeOut_us
         return rc;
 
 #ifdef CC_WINDOWS
+    // 长度参数按 Winsock 约定为 int；缓冲区超过 int 上限时取 0x7FFFFFFF
     got = recv(inner->sock, (char *)buf, cap > 0x7FFFFFFFull ? 0x7FFFFFFF : (int)cap, 0);
 #else
     got = (int)recv(inner->sock, buf, (size_t)cap, 0);

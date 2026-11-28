@@ -1,6 +1,6 @@
 # 统一文件管理内核测试用例
 
-覆盖 `ccfiles` 的探针、路径、挂载、读写落盘、目录检索、cp/mv/rm、资源包和事务。
+覆盖 `ccfiles` 的探针、路径、挂载、读写落盘、目录检索、find_ex、realpath、cp/mv/rm、资源包和事务。
 被测接口见 [ccfiles](../ccfiles.md)。
 
 VFS 物理副作用优先在测试进程内用 `fopen` / `fread` / `stat` / `_stat` 读取真实磁盘；
@@ -48,6 +48,46 @@ VFS 物理副作用优先在测试进程内用 `fopen` / `fread` / `stat` / `_st
 - 级别：quick
 - 代码：`tests/ccfiles.c` · `CC_CASE("FS-API-003")`
 
+## FS-FINDX-001 find_ex 深度与相对路径
+
+- 状态：已实现
+- 前置：`/m` 已挂载，含 `a.txt`、`b.bin`、`sub/c.txt`。
+- 步骤：分别以深度 1、2、0 调用 `ccfiles_find_ex("/m", "*", depth, ...)`；
+  再以 `*.txt` 和深度 0 调用；最后用 `*.h` 检查无匹配。
+- 预期：深度 1 路径为 `a.txt;b.bin;sub;`；深度 2 为
+  `a.txt;b.bin;sub;sub/c.txt;`；深度 0 的 `*.txt` 为
+  `a.txt;sub/c.txt;`；无匹配回调 0 次。
+- 真值来源：规范。
+- 平台：all
+- 级别：quick
+- 代码：`tests/ccfiles.c` · `CC_CASE("FS-FINDX-001")`
+
+## FS-FINDX-002 find_ex 回调中止与错误码
+
+- 状态：已实现
+- 前置：同 `FS-FINDX-001`。
+- 步骤：回调在第一次命中后返回 7；传入空探针、缺失根、文件根。
+- 预期：回调中止后函数返回 7，命中 1 次；空探针返回
+  `CC_FS_ERR_PARAM`；缺失根返回 `CC_FS_ERR_NOENT`；文件根返回
+  `CC_FS_ERR_NOTDIR`。
+- 真值来源：规范。
+- 平台：all
+- 级别：quick
+- 代码：`tests/ccfiles.c` · `CC_CASE("FS-FINDX-002")`
+
+## FS-REAL-001 realpath 文件、目录与根
+
+- 状态：已实现
+- 前置：`/m` 已挂载到临时目录。
+- 步骤：分别对 `/m`、`/m/a.txt`、`/m/sub`、`/`、`/m/nope` 调用
+  `ccfiles_realpath`。
+- 预期：`/m` 返回挂载真实目录；文件与子目录返回对应宿主路径；`/` 返回
+  `res` 目录；缺失路径返回 `CC_FS_ERR_NOENT` 且输出为空。
+- 真值来源：规范 + 挂载参数。
+- 平台：all
+- 级别：quick
+- 代码：`tests/ccfiles.c` · `CC_CASE("FS-REAL-001")`
+
 ## FS-API-004 mkdir、chdir 与 `..` 语义
 
 - 状态：已实现
@@ -83,12 +123,13 @@ VFS 物理副作用优先在测试进程内用 `fopen` / `fread` / `stat` / `_st
 - 前置：`/m/sub/c.txt` 内容为 `abc`。
 - 步骤：`pack("/m/sub", pkg)`；创建 `/m/pkg.pkg` 节点；解包到宿主目录；
   `mount("/pkg", pkg, PKG)`；`chdir` 和 `..`；`stat`、`open`、`read`；
-  尝试写入和创建目录；卸载。
+  `realpath("/pkg")`、`realpath("/pkg/c.txt")`；尝试写入和创建目录；卸载。
 - 预期：打包/解包成功；按内部格式独立解析包，`file_count == 1`、
   `block_count == 1`、`data_size == 3`、`header_crc` 与块表一致，
   块名为 `c.txt`、数据为 `abc`；解包文件内容为 `abc`；包挂载成功；
   包内文件只读，`size == 3` 且 `crc32` 与块头一致；包内 `list` 为
-  `c.txt:2:3;`；读取内容为 `abc`；写入和 `mkdir` 返回
+  `c.txt:2:3;`；读取内容为 `abc`；`/pkg` 反查为资源包文件路径，
+  `/pkg/c.txt` 返回 `CC_FS_ERR_NOPHYS`；写入和 `mkdir` 返回
   `CC_FS_ERR_PROTECT`；卸载成功。
 - 真值来源：规范 + 宿主文件内容 + 包内读回。
 - 平台：all

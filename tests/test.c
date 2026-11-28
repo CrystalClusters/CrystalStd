@@ -24,21 +24,21 @@
 #define TEST_CHDIR chdir
 #endif
 
-/* 判断 stdin 和 stdout 是否都是真正的控制台终端；NUL、文件、管道都不算。 */
+// 判断 stdin 和 stdout 是否都是真正的控制台终端；NUL、文件、管道都不算。
 static CCBOOL inner_console_is_tty(void)
 {
 #ifdef CC_WINDOWS
     DWORD in_mode;
     DWORD out_mode;
     return (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &in_mode) &&
-            GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &out_mode))
-               ? CCTRUE : CCFALSE;
+            GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &out_mode)) ? CCTRUE : CCFALSE;
 #else
     return (isatty(fileno(stdin)) && isatty(fileno(stdout))) ? CCTRUE : CCFALSE;
 #endif
 }
 
-typedef struct test_suite {
+typedef struct test_suite
+{
     const char *name;
     const char *title;
     void (*run)(void);
@@ -47,6 +47,10 @@ typedef struct test_suite {
 static const test_suite g_suites[] = {
     { "BASIC", "基础测试", test_basic },
     { "COLOR", "color_print 专项", test_color_print },
+    { "PATH", "路径工具专项", test_ccpath },
+    { "ENC", "编码转换专项", test_cc_encoding },
+    { "HOST", "宿主文件专项", test_cchost },
+    { "HASH", "摘要计算专项", test_cc_hash },
     { "RBT", "红黑树内核专项", test_rbt_core },
     { "DYN", "动态数组内核专项", test_dyn_core },
     { "ALLOC", "ccalloc 专项", test_ccalloc },
@@ -60,7 +64,8 @@ static const test_suite g_suites[] = {
 static CCBOOL inner_file_exists(const char *path)
 {
     FILE *fp = fopen(path, "rb");
-    if (!fp) return CCFALSE;
+    if (!fp)
+        return CCFALSE;
     fclose(fp);
     return CCTRUE;
 }
@@ -68,18 +73,21 @@ static CCBOOL inner_file_exists(const char *path)
 static void inner_normalize(char *path)
 {
     for (char *p = path; *p; p++)
-        if (*p == '\\') *p = '/';
+        if (*p == '\\')
+            *p = '/';
 }
 
-/* 从 start 向上查找 tests/test.c，找到后返回项目根。 */
+// 从 start 向上查找 tests/test.c，找到后返回项目根。
 static CCBOOL inner_find_root(const char *start, char *out, size_t cap)
 {
     char buf[1024];
     int n;
 
-    if (!start || !*start || !out || cap == 0) return CCFALSE;
+    if (!start || !*start || !out || cap == 0)
+        return CCFALSE;
     n = snprintf(buf, sizeof(buf), "%s", start);
-    if (n <= 0 || (size_t)n >= sizeof(buf)) return CCFALSE;
+    if (n <= 0 || (size_t)n >= sizeof(buf))
+        return CCFALSE;
     inner_normalize(buf);
 
     for (;;)
@@ -93,7 +101,8 @@ static CCBOOL inner_find_root(const char *start, char *out, size_t cap)
         }
 
         char *slash = strrchr(buf, '/');
-        if (!slash) break;
+        if (!slash)
+            break;
         if (slash == buf)
         {
             buf[1] = '\0';
@@ -104,7 +113,7 @@ static CCBOOL inner_find_root(const char *start, char *out, size_t cap)
     return CCFALSE;
 }
 
-/* 切换工作目录到项目根，保证测试临时目录等相对路径稳定。 */
+// 切换工作目录到项目根，保证测试临时目录等相对路径稳定。
 static void inner_init_project(void)
 {
     char cwd[1024];
@@ -119,8 +128,7 @@ static void inner_init_project(void)
 
 static void inner_print_usage(void)
 {
-    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
-                "用法: test [all|manual|<套件名>] [选项]\n");
+    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT) "用法: test [all|manual|<套件名>] [选项]\n");
     color_print("套件名: ");
     for (CCUINT32 i = 0; i < SUITE_COUNT; i++)
         color_print("%s%s", i ? "|" : "", g_suites[i].name);
@@ -147,7 +155,8 @@ static CCBOOL inner_read_choice(char *buf, CCUINT32 size)
 {
     CCUINT32 len;
 
-    if (!fgets(buf, (int)size, stdin)) return CCFALSE;
+    if (!fgets(buf, (int)size, stdin))
+        return CCFALSE;
     buf[size - 1] = '\0';
     len = (CCUINT32)strlen(buf);
     while (len > 0)
@@ -160,22 +169,28 @@ static CCBOOL inner_read_choice(char *buf, CCUINT32 size)
     }
 
     char *p = buf;
-    while (*p == ' ' || *p == '\t') p++;
-    if (p != buf) memmove(buf, p, strlen(p) + 1);
+    while (*p == ' ' || *p == '\t')
+        p++;
+    if (p != buf)
+        memmove(buf, p, strlen(p) + 1);
     return CCTRUE;
 }
 
-static int inner_find_suite(const char *name)
+static CCINT32 inner_find_suite(const char *name)
 {
-    if (!name || !*name) return -1;
-    if (!strcmp(name, "all")) return 100;
-    if (!strcmp(name, "manual")) return 101;
+    if (!name || !*name)
+        return -1;
+    if (!strcmp(name, "all"))
+        return 100;
+    if (!strcmp(name, "manual"))
+        return 101;
     for (CCUINT32 i = 0; i < SUITE_COUNT; i++)
-        if (!strcmp(name, g_suites[i].name)) return (int)i;
+        if (!strcmp(name, g_suites[i].name))
+            return (CCINT32)i;
     return -1;
 }
 
-static int inner_run_one(CCUINT32 index)
+static CCINT32 inner_run_one(CCUINT32 index)
 {
     cc_test_suite_begin(g_suites[index].name, g_suites[index].title);
     g_suites[index].run();
@@ -183,32 +198,35 @@ static int inner_run_one(CCUINT32 index)
     return cc_test_suite_failures() ? 1 : 0;
 }
 
-static int inner_run_all(void)
+static CCINT32 inner_run_all(void)
 {
-    int failed = 0;
+    CCINT32 failed = 0;
     for (CCUINT32 i = 0; i < SUITE_COUNT; i++)
     {
-        if (inner_run_one(i)) failed = 1;
+        if (inner_run_one(i))
+            failed = 1;
     }
     return failed;
 }
 
-/*
- * required 为真表示用户明确要求人工项；非交互环境应报错。
- * required 为假表示全量运行顺带执行人工项；非交互环境只提示并跳过。
- */
-static int inner_run_manual(CCBOOL required)
+// required 为真表示用户明确要求人工项；非交互环境应报错。
+// required 为假表示全量运行顺带执行人工项；非交互环境只提示并跳过。
+static CCINT32 inner_run_manual(CCBOOL required)
 {
     if (!inner_console_is_tty())
     {
         if (required)
         {
-            color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
-                        "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
+            color_print(
+                CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+                "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n"
+            );
             return 2;
         }
-        color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
-                    "[提示] 当前不是交互终端，人工确认项已跳过。\n");
+        color_print(
+            CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
+            "[提示] 当前不是交互终端，人工确认项已跳过。\n"
+        );
         return 0;
     }
 
@@ -216,18 +234,18 @@ static int inner_run_manual(CCBOOL required)
     return 0;
 }
 
-static int inner_run_all_with_manual(void)
+static CCINT32 inner_run_all_with_manual(void)
 {
-    int failed = inner_run_all();
+    CCINT32 failed = inner_run_all();
     color_print("\n");
     if (inner_run_manual(CCFALSE) == 2)
         failed = 1;
     return failed;
 }
 
-static int inner_menu(void)
+static CCINT32 inner_menu(void)
 {
-    int any_fail = 0;
+    CCINT32 any_fail = 0;
 
     for (;;)
     {
@@ -239,15 +257,18 @@ static int inner_menu(void)
             break;
         }
 
-        if (!strcmp(choice, "q")) break;
+        if (!strcmp(choice, "q"))
+            break;
         if (!strcmp(choice, "a") || !strcmp(choice, "all"))
         {
-            if (inner_run_all_with_manual()) any_fail = 1;
+            if (inner_run_all_with_manual())
+                any_fail = 1;
             continue;
         }
         if (!strcmp(choice, "m") || !strcmp(choice, "manual"))
         {
-            if (inner_run_manual(CCTRUE) == 2) any_fail = 1;
+            if (inner_run_manual(CCTRUE) == 2)
+                any_fail = 1;
             continue;
         }
 
@@ -255,14 +276,16 @@ static int inner_menu(void)
         unsigned long index = strtoul(choice, &end, 10);
         if (end && *end == '\0' && index >= 1 && index <= SUITE_COUNT)
         {
-            if (inner_run_one((CCUINT32)(index - 1))) any_fail = 1;
+            if (inner_run_one((CCUINT32)(index - 1)))
+                any_fail = 1;
             continue;
         }
 
-        int suite = inner_find_suite(choice);
+        CCINT32 suite = inner_find_suite(choice);
         if (suite >= 0 && suite < 100)
         {
-            if (inner_run_one((CCUINT32)suite)) any_fail = 1;
+            if (inner_run_one((CCUINT32)suite))
+                any_fail = 1;
             continue;
         }
 
@@ -280,7 +303,7 @@ int main(int argc, char **argv)
 
     inner_init_project();
 
-    for (int i = 1; i < argc; i++)
+    for (CCINT32 i = 1; i < argc; i++)
     {
         if (!strcmp(argv[i], "--level") && i + 1 < argc)
             level = argv[++i];
@@ -322,7 +345,7 @@ int main(int argc, char **argv)
 #else
         cc_test_begin("debug", level, seed);
 #endif
-        int failed = inner_menu();
+        CCINT32 failed = inner_menu();
         cc_test_print_summary();
         return (failed || cc_test_failures() || cc_test_harness_errors()) ? 1 : 0;
     }
@@ -330,7 +353,7 @@ int main(int argc, char **argv)
     if (!suite)
         suite = "all";
 
-    int index = inner_find_suite(suite);
+    CCINT32 index = inner_find_suite(suite);
     if (index < 0)
     {
         color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[错误] 未知套件: %s\n", suite);
@@ -340,8 +363,10 @@ int main(int argc, char **argv)
 
     if (index == 101 && !inner_console_is_tty())
     {
-        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
-                    "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n");
+        color_print(
+            CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+            "[错误] 人工确认项需要交互终端，请在终端中直接运行。\n"
+        );
         return 2;
     }
 
@@ -351,7 +376,7 @@ int main(int argc, char **argv)
     cc_test_begin("debug", level, seed);
 #endif
 
-    int failed = 0;
+    CCINT32 failed = 0;
     if (index == 100)
         failed = inner_run_all_with_manual();
     else if (index == 101)

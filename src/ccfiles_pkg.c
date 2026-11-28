@@ -60,10 +60,10 @@ static CCUINT64 fs_le64_get(const CCUINT8 *p)
     return v;
 }
 
-/* 落盘魔数字节序列：'_CPK'，与端序无关 */
+// 落盘魔数字节序列：'_CPK'，与端序无关
 static const CCUINT8 fs_pkg_magic[CC_FS_PKG_MAGIC_SIZE] = {'_', 'C', 'P', 'K'};
 
-/* 取已打开流的总长度（保留当前位置） */
+// 取已打开流的总长度（保留当前位置）
 static CCINT32 fs_stream_size(FILE *fp, CCUINT64 *out)
 {
     if (!fp || !out)
@@ -96,7 +96,7 @@ static CCINT32 fs_stream_size(FILE *fp, CCUINT64 *out)
     return CC_FS_OK;
 }
 
-/* 头部字段 -> 32 字节小端磁盘镜像（header_crc 由调用方回填） */
+// 头部字段 -> 32 字节小端磁盘镜像（header_crc 由调用方回填）
 static void fs_pkg_header_put(CCUINT8 *raw, const CCFsPkgHeader *h)
 {
     memcpy(raw, fs_pkg_magic, CC_FS_PKG_MAGIC_SIZE);
@@ -109,7 +109,7 @@ static void fs_pkg_header_put(CCUINT8 *raw, const CCFsPkgHeader *h)
     fs_le32_put(raw + 28, h->reserved);
 }
 
-/* 32 字节小端磁盘镜像 -> 头部字段 */
+// 32 字节小端磁盘镜像 -> 头部字段
 static void fs_pkg_header_get(const CCUINT8 *raw, CCFsPkgHeader *h)
 {
     memcpy(h->magic, raw, CC_FS_PKG_MAGIC_SIZE);
@@ -122,7 +122,7 @@ static void fs_pkg_header_get(const CCUINT8 *raw, CCFsPkgHeader *h)
     h->reserved = fs_le32_get(raw + 28);
 }
 
-/* 块字段 -> 32 字节小端磁盘镜像 */
+// 块字段 -> 32 字节小端磁盘镜像
 static void fs_pkg_block_put(CCUINT8 *raw, const CCFsPkgBlock *b)
 {
     fs_le32_put(raw + 0, b->name_len);
@@ -133,7 +133,7 @@ static void fs_pkg_block_put(CCUINT8 *raw, const CCFsPkgBlock *b)
     fs_le32_put(raw + 28, b->flags);
 }
 
-/* 32 字节小端磁盘镜像 -> 块字段 */
+// 32 字节小端磁盘镜像 -> 块字段
 static void fs_pkg_block_get(const CCUINT8 *raw, CCFsPkgBlock *b)
 {
     b->name_len = fs_le32_get(raw + 0);
@@ -144,14 +144,14 @@ static void fs_pkg_block_get(const CCUINT8 *raw, CCFsPkgBlock *b)
     b->flags = fs_le32_get(raw + 28);
 }
 
-/* 头部 CRC：覆盖磁盘字节中除 header_crc 字段自身外的 28 字节（含 reserved） */
+// 头部 CRC：覆盖磁盘字节中除 header_crc 字段自身外的 28 字节（含 reserved）
 static CCUINT32 fs_pkg_header_crc(const CCUINT8 *raw)
 {
     CCUINT32 crc = cc_crc32(raw, 24, 0);
     return cc_crc32(raw + 28, 4, crc);
 }
 
-/* 包内名字必须是相对路径：非空、不以 `/` 开头、无空段 / `.` / `..`、无内嵌 NUL、段尾不得为空格 / 点、无 `\` */
+// 包内名字必须是相对路径：非空、不以 `/` 开头、无空段 / `.` / `..`、无内嵌 NUL、段尾不得为空格 / 点、无 `\`
 static CCBOOL fs_pkg_name_ok(const char *name, CCUINT32 len)
 {
     if (!name || len == 0)
@@ -175,20 +175,23 @@ static CCBOOL fs_pkg_name_ok(const char *name, CCUINT32 len)
         if ((seg == 1 && name[start] == '.') ||
             (seg == 2 && name[start] == '.' && name[start + 1] == '.'))
             return CCFALSE;
-        /* Windows 会忽略段末尾的空格 / 点，拒绝以免包名绕出 staging 目录 */
+        // Windows 会忽略段末尾的空格 / 点，拒绝以免包名绕出 staging 目录
         if (name[i - 1] == ' ' || name[i - 1] == '.')
             return CCFALSE;
         if (i < len)
-            i++; /* 跳过 '/' */
+            i++; // 跳过 '/'
     }
     return CCTRUE;
 }
 
-/* 读取并校验资源包头 + 块表。成功时 *out_blocks 由调用方 ccalloc(..., 0, NULL) 释放。
-   校验项：魔数 / 版本 / header_crc / 文件长度与块表边界 / data_size /
-   每块的 name 区与数据区范围 / 目录块 offset、size 为 0 / file_count 一致。 */
-static CCINT32 fs_pkg_read_header(FILE *fp, CCFsPkgHeader *h,
-                                  CCFsPkgBlock **out_blocks)
+// 读取并校验资源包头 + 块表。成功时 *out_blocks 由调用方 ccalloc(..., 0, NULL) 释放。
+// 校验项：魔数 / 版本 / header_crc / 文件长度与块表边界 / data_size /
+// 每块的 name 区与数据区范围 / 目录块 offset、size 为 0 / file_count 一致。
+static CCINT32 fs_pkg_read_header(
+    FILE *fp,
+    CCFsPkgHeader *h,
+    CCFsPkgBlock **out_blocks
+)
 {
     if (!fp || !h || !out_blocks)
         return CC_FS_ERR_PARAM;
@@ -211,7 +214,7 @@ static CCINT32 fs_pkg_read_header(FILE *fp, CCFsPkgHeader *h,
     if (r != CC_FS_OK)
         return r;
 
-    /* 块表必须整体落在文件内（先按总长限界，避免按 block_count 巨额分配） */
+    // 块表必须整体落在文件内（先按总长限界，避免按 block_count 巨额分配）
     if ((CCUINT64)h->block_count >
         (total - CC_FS_PKG_HEADER_SIZE) / CC_FS_PKG_BLOCK_SIZE)
         return CC_FS_ERR_PARAM;
@@ -228,9 +231,11 @@ static CCINT32 fs_pkg_read_header(FILE *fp, CCFsPkgHeader *h,
 
     if (h->block_count > 0)
     {
-        blocks = (CCFsPkgBlock *)ccalloc(NULL,
-                                         (CCUINT64)h->block_count * sizeof(CCFsPkgBlock),
-                                         CC_DBG_REL_TAG("资源包块表", NULL));
+        blocks = (CCFsPkgBlock *)ccalloc(
+            NULL,
+            (CCUINT64)h->block_count * sizeof(CCFsPkgBlock),
+            CC_DBG_REL_TAG("资源包块表", NULL)
+        );
         if (!blocks)
         {
             ret = CC_FS_ERR_NOSPACE;
@@ -296,15 +301,23 @@ FailedtoAllocateBlocks:
  * 包投影：读入块表并构建只读子树
  * ========================================================================== */
 
-static CCUINT32 fs_pkg_make_child(CCUINT32 parent_idx, const char *name,
-                                  CCBOOL is_dir, CCUINT64 off, CCUINT64 size, CCUINT32 crc)
+static CCUINT32 fs_pkg_make_child(
+    CCUINT32 parent_idx,
+    const char *name,
+    CCBOOL is_dir,
+    CCUINT64 off,
+    CCUINT64 size,
+    CCUINT32 crc
+)
 {
     CCUINT32 existing = fs_child_get_idx(parent_idx, name);
     if (existing != CC_FS_NIL)
         return existing;
 
-    CCUINT32 idx = fs_create_node(parent_idx, name,
-                                  is_dir ? CC_FS_TYPE_DIR : CC_FS_TYPE_FILE, NULL, CC_FS_MOUNT_PKG, FS_ORIGIN_PKG);
+    CCUINT32 idx = fs_create_node(
+        parent_idx, name,
+        is_dir ? CC_FS_TYPE_DIR : CC_FS_TYPE_FILE, NULL, CC_FS_MOUNT_PKG, FS_ORIGIN_PKG
+    );
     if (idx == CC_FS_NIL)
         return CC_FS_NIL;
 
@@ -332,7 +345,22 @@ static CCUINT32 fs_pkg_make_child(CCUINT32 parent_idx, const char *name,
     return idx;
 }
 
-/* 读取包文件并把它投影到 anchor_idx 之下 */
+// 读取包文件并把它投影到 anchor_idx 之下
+static CCINT32 fs_load_pkg_finish(
+    char *name,
+    CCFsPkgBlock *blocks,
+    FILE *fp,
+    CCINT32 ret
+)
+{
+    if (name)
+        ccalloc(name, 0, NULL);
+    if (blocks)
+        ccalloc(blocks, 0, NULL);
+    fclose(fp);
+    return ret;
+}
+
 CCINT32 fs_load_pkg_into(CCUINT32 anchor_idx, const char *pkg_path)
 {
     if (!pkg_path)
@@ -358,9 +386,11 @@ CCINT32 fs_load_pkg_into(CCUINT32 anchor_idx, const char *pkg_path)
     for (CCUINT32 i = 0; i < h.block_count; i++)
     {
         CCFsPkgBlock *b = &blocks[i];
-        /* 包内名称按 name_len 动态读取，长度只受内存约束 */
-        name = (char *)ccalloc(NULL, (CCUINT64)b->name_len + 1,
-                               CC_DBG_REL_TAG("包内路径", NULL));
+        // 包内名称按 name_len 动态读取，长度只受内存约束
+        name = (char *)ccalloc(
+            NULL, (CCUINT64)b->name_len + 1,
+            CC_DBG_REL_TAG("包内路径", NULL)
+        );
         if (!name)
         {
             ret = CC_FS_ERR_NOSPACE;
@@ -401,8 +431,11 @@ CCINT32 fs_load_pkg_into(CCUINT32 anchor_idx, const char *pkg_path)
             if (is_last)
             {
                 CCBOOL is_dir = (b->flags & CC_FS_PKG_FLAG_DIR) ? CCTRUE : CCFALSE;
-                if (fs_pkg_make_child(parent, start, is_dir,
-                                      b->offset, b->size, b->crc32) == CC_FS_NIL)
+                if (fs_pkg_make_child(
+                        parent, start, is_dir,
+                        b->offset, b->size, b->crc32
+                    ) == CC_FS_NIL
+                )
                 {
                     ret = CC_FS_ERR_NOSPACE;
                     goto FailedtoMakeChild;
@@ -427,33 +460,27 @@ CCINT32 fs_load_pkg_into(CCUINT32 anchor_idx, const char *pkg_path)
         name = NULL;
     }
 
-    if (blocks)
-        ccalloc(blocks, 0, NULL);
-    fclose(fp);
-    return CC_FS_OK;
+    return fs_load_pkg_finish(NULL, blocks, fp, CC_FS_OK);
 
 FailedtoMakeChild:
 FailedtoReadName:
-    ccalloc(name, 0, NULL);
 FailedtoAllocName:
 FailedtoReadHeader:
-    if (blocks)
-        ccalloc(blocks, 0, NULL);
-    fclose(fp);
-    return ret;
+    return fs_load_pkg_finish(name, blocks, fp, ret);
 }
+
 /* ============================================================================
  * 打包 / 解包
  * ========================================================================== */
 
 typedef struct cc_fs_pkg_entry
 {
-    char *name; /* 相对路径（`/` 分隔） */
+    char *name; // 相对路径（`/` 分隔）
     CCUINT32 name_len;
     CCUINT32 name_off;
     CCBOOL is_dir;
     CCUINT32 node_idx;
-    CCUINT64 offset; /* 数据在包内的绝对偏移 */
+    CCUINT64 offset; // 数据在包内的绝对偏移
     CCUINT64 size;
     CCUINT32 crc32;
 } CCFsPkgEntry;
@@ -461,10 +488,10 @@ typedef struct cc_fs_pkg_entry
 typedef struct cc_fs_pack_item
 {
     CCUINT32 dir;
-    char *prefix; /* 堆分配 */
+    char *prefix; // 堆分配
 } CCFsPackItem;
 
-/* 释放条目表内所有名称与条目数组本身 */
+// 释放条目表内所有名称与条目数组本身
 static void fs_pkg_entries_free(CCDyn *entries)
 {
     if (!entries)
@@ -479,7 +506,7 @@ static void fs_pkg_entries_free(CCDyn *entries)
     fs_buf_free(entries);
 }
 
-/* 弹出并释放栈内所有尚未处理的目录前缀 */
+// 弹出并释放栈内所有尚未处理的目录前缀
 static void fs_pack_items_free(CCDyn *stack)
 {
     if (!stack)
@@ -487,8 +514,11 @@ static void fs_pack_items_free(CCDyn *stack)
     while (stack->size >= (CCUINT32)sizeof(CCFsPackItem))
     {
         CCFsPackItem it;
-        if (cc_dyn_core_pop(stack, (CCUINT32)sizeof(CCFsPackItem),
-                            (CCINT32)sizeof(CCFsPackItem), &it) != 0)
+        if (cc_dyn_core_pop(
+                stack, (CCUINT32)sizeof(CCFsPackItem),
+                (CCINT32)sizeof(CCFsPackItem), &it
+            ) != 0
+        )
             break;
         if (it.prefix)
             ccalloc(it.prefix, 0, NULL);
@@ -496,7 +526,7 @@ static void fs_pack_items_free(CCDyn *stack)
     fs_buf_free(stack);
 }
 
-/* 收集整棵目录树的打包条目；显式栈迭代，无递归 */
+// 收集整棵目录树的打包条目；显式栈迭代，无递归
 static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entries)
 {
     CCDyn stack;
@@ -525,8 +555,11 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
     CCFsPackItem it;
     it.dir = dir_idx;
     it.prefix = p0;
-    if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCFsPackItem),
-                         (CCINT32)sizeof(CCFsPackItem), &it) != 0)
+    if (cc_dyn_core_push(
+            &stack, (CCUINT32)sizeof(CCFsPackItem),
+            (CCINT32)sizeof(CCFsPackItem), &it
+        ) != 0
+    )
     {
         ret = CC_FS_ERR_NOSPACE;
         goto FailedtoPushRoot;
@@ -535,8 +568,11 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
 
     while (stack.size >= (CCUINT32)sizeof(CCFsPackItem))
     {
-        if (cc_dyn_core_pop(&stack, (CCUINT32)sizeof(CCFsPackItem),
-                            (CCINT32)sizeof(CCFsPackItem), &cur) != 0)
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCFsPackItem),
+                (CCINT32)sizeof(CCFsPackItem), &cur
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_IO;
             goto FailedtoPop;
@@ -562,8 +598,10 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
             }
 
             memset(&e, 0, sizeof(e));
-            e.name = fs_strdup(fs_buf_str(&full),
-                               CC_DBG_REL_TAG("打包条目名称", NULL));
+            e.name = fs_strdup(
+                fs_buf_str(&full),
+                CC_DBG_REL_TAG("打包条目名称", NULL)
+            );
             if (!e.name)
             {
                 ret = CC_FS_ERR_NOSPACE;
@@ -575,8 +613,11 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
             e.size = e.is_dir ? 0 : n->size;
             e.crc32 = n->crc32;
 
-            if (cc_dyn_core_push(entries, (CCUINT32)sizeof(CCFsPkgEntry),
-                                 (CCINT32)sizeof(CCFsPkgEntry), &e) != 0)
+            if (cc_dyn_core_push(
+                    entries, (CCUINT32)sizeof(CCFsPkgEntry),
+                    (CCINT32)sizeof(CCFsPkgEntry), &e
+                ) != 0
+            )
             {
                 ret = CC_FS_ERR_NOSPACE;
                 goto FailedtoPushEntry;
@@ -594,8 +635,10 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
                     goto FailedtoBuildPrefix;
                 }
 
-                dup = fs_strdup(fs_buf_str(&cpfx),
-                                CC_DBG_REL_TAG("打包前缀", NULL));
+                dup = fs_strdup(
+                    fs_buf_str(&cpfx),
+                    CC_DBG_REL_TAG("打包前缀", NULL)
+                );
                 if (!dup)
                 {
                     ret = CC_FS_ERR_NOSPACE;
@@ -605,8 +648,11 @@ static CCINT32 fs_pack_collect(CCUINT32 dir_idx, const char *prefix, CCDyn *entr
                 CCFsPackItem child;
                 child.dir = kid;
                 child.prefix = dup;
-                if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCFsPackItem),
-                                     (CCINT32)sizeof(CCFsPackItem), &child) != 0)
+                if (cc_dyn_core_push(
+                        &stack, (CCUINT32)sizeof(CCFsPackItem),
+                        (CCINT32)sizeof(CCFsPackItem), &child
+                    ) != 0
+                )
                 {
                     ret = CC_FS_ERR_NOSPACE;
                     goto FailedtoPushChild;
@@ -649,7 +695,7 @@ FailedtoAllocRoot:
     return ret;
 }
 
-/* 逻辑文件全量 CRC（经物理层 / 包内块） */
+// 逻辑文件全量 CRC（经物理层 / 包内块）
 static CCUINT32 fs_crc_of_file(CCUINT32 idx)
 {
     CCUINT8 tmp[64 * 1024];
@@ -671,7 +717,7 @@ static CCUINT32 fs_crc_of_file(CCUINT32 idx)
     return crc;
 }
 
-/* 解出一个文件块：先写 dst.part，完整关闭后再 rename 到 dst */
+// 解出一个文件块：先写 dst.part，完整关闭后再 rename 到 dst
 static CCINT32 fs_unpack_file(FILE *fp, const CCFsPkgBlock *b, const char *dst)
 {
     if (!fp || !b || !dst)
@@ -740,7 +786,6 @@ FailedtoCloseDest:
 FailedtoCopy:
     if (of)
         fclose(of);
-    fs_unlink_file(fs_buf_str(&tmp));
 FailedtoOpenDest:
 FailedtoSeek:
     fs_unlink_file(fs_buf_str(&tmp));
@@ -822,7 +867,7 @@ CCINT32 ccfiles_pack(CCFiles *fs, const char *v_path, const char *real_path)
         data_cursor += ea[i].size;
     }
 
-    /* 先写同目录临时文件，完整落盘并关闭后再原子发布最终路径 */
+    // 先写同目录临时文件，完整落盘并关闭后再原子发布最终路径
     ret = fs_buf_put(&temp, outp);
     if (ret == CC_FS_OK)
         ret = fs_buf_put(&temp, ".part");
@@ -847,7 +892,7 @@ CCINT32 ccfiles_pack(CCFiles *fs, const char *v_path, const char *real_path)
     h.header_crc = 0;
     h.reserved = 0;
 
-    /* 序列化为固定小端磁盘镜像：CRC 覆盖磁盘字节，与宿主端序无关 */
+    // 序列化为固定小端磁盘镜像：CRC 覆盖磁盘字节，与宿主端序无关
     CCUINT8 hraw[CC_FS_PKG_HEADER_SIZE];
     fs_pkg_header_put(hraw, &h);
     h.header_crc = fs_pkg_header_crc(hraw);
@@ -912,7 +957,7 @@ CCINT32 ccfiles_pack(CCFiles *fs, const char *v_path, const char *real_path)
             }
             pos += (CCUINT64)got;
         }
-        fs_fh_release_if_unused(ea[i].node_idx); /* 打包读取不长期占用 fd */
+        fs_fh_release_if_unused(ea[i].node_idx); // 打包读取不长期占用 fd
     }
 
     if (fclose(fp) != 0)
@@ -991,7 +1036,7 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path)
         goto FailedtoWalk;
     }
 
-    /* 包文件自身的写缓冲必须先落盘，随后按物理路径 fopen 才能读到最新内容 */
+    // 包文件自身的写缓冲必须先落盘，随后按物理路径 fopen 才能读到最新内容
     ret = fs_fh_flush(idx);
     if (ret != CC_FS_OK)
         goto FailedtoFlush;
@@ -1024,7 +1069,7 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path)
     CCUINT64 name_area = (CCUINT64)CC_FS_PKG_HEADER_SIZE +
                          (CCUINT64)h.block_count * CC_FS_PKG_BLOCK_SIZE;
 
-    /* 先解到 tgt.part staging 树，全部成功后再整体 rename 发布 */
+    // 先解到 tgt.part staging 树，全部成功后再整体 rename 发布
     ret = fs_buf_put(&stage, tgt);
     if (ret == CC_FS_OK)
         ret = fs_buf_put(&stage, ".part");
@@ -1040,9 +1085,11 @@ CCINT32 ccfiles_unpack(CCFiles *fs, const char *v_path, const char *real_path)
     for (CCUINT32 i = 0; i < h.block_count; i++)
     {
         CCFsPkgBlock *b = &blocks[i];
-        /* 包内名称按 name_len 动态读取，长度只受内存约束 */
-        name = (char *)ccalloc(NULL, (CCUINT64)b->name_len + 1,
-                               CC_DBG_REL_TAG("解包名称", NULL));
+        // 包内名称按 name_len 动态读取，长度只受内存约束
+        name = (char *)ccalloc(
+            NULL, (CCUINT64)b->name_len + 1,
+            CC_DBG_REL_TAG("解包名称", NULL)
+        );
         if (!name)
         {
             ret = CC_FS_ERR_NOSPACE;

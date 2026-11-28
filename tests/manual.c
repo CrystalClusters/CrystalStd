@@ -10,7 +10,7 @@
 #include "test_header.h"
 #include <stdio.h>
 
-/* 等用户按回车，避免人工输出被控制台缓冲截断。 */
+// 等用户按回车，避免人工输出被控制台缓冲截断。
 static void manual_pause(const char *prompt)
 {
     int c;

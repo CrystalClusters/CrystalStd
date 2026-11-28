@@ -19,7 +19,7 @@ CCINT32 _ccnet_udp_setup(CCNetStart *start, CCNetCtx *ctx)
     struct sockaddr_storage ss;
     CCNetSockLen len;
     CCINT32 rc;
-    int opt = 1;
+    int opt = 1;    // setsockopt 的开关量 optval 按接口约定为 int
 
     if (!start || !ctx)
         return CC_NET_ERR_PARAM;
@@ -29,15 +29,20 @@ CCINT32 _ccnet_udp_setup(CCNetStart *start, CCNetCtx *ctx)
     if (!_ccnet_ready())
         return CC_NET_ERR_IO;
 
-    sock = socket(start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6,
-                  SOCK_DGRAM, 0);
+    sock = socket(
+        start->addr.family == CC_NET_AF_INET ? AF_INET : AF_INET6,
+        SOCK_DGRAM, 0
+    );
     if (sock == CC_NET_SOCK_INVALID)
         return _ccnet_map_os(_ccnet_last_error());
 
     if (start->addr.family == CC_NET_AF_INET6)
     {
-        if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-                       (const char *)&opt, sizeof(opt)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_IPV6, IPV6_V6ONLY,
+                (const char *)&opt, sizeof(opt)
+            ) != 0
+        )
         {
             rc = _ccnet_map_os(_ccnet_last_error());
             _ccnet_sock_close(sock);
@@ -87,6 +92,7 @@ CCINT32 ccnet_udp_open(const CCNetAddr *addr, CCNetUdpEntry entry, void *user)
 static CCINT32 _udp_local(void *ctx, CCNetAddr *out)
 {
     CCNetCtx *inner = (CCNetCtx *)ctx;
+
     if (!inner || !out)
         return CC_NET_ERR_PARAM;
     *out = inner->local;
@@ -99,7 +105,7 @@ static CCINT64 _udp_sendto(void *ctx, const CCNetAddr *to, const void *data, CCU
     struct sockaddr_storage ss;
     CCNetSockLen len;
     CCINT32 rc;
-    int sent;
+    int sent;       // sendto 的返回值：Winsock 为 int，POSIX 为 ssize_t，此处统一按 int 保存
 
     if (!inner || !to || (size != 0 && !data))
         return CC_NET_ERR_PARAM;
@@ -117,6 +123,7 @@ static CCINT64 _udp_sendto(void *ctx, const CCNetAddr *to, const void *data, CCU
 #ifdef CC_WINDOWS
     if (size > 0x7FFFFFFFull)
         return CC_NET_ERR_TOOBIG;
+    // 长度参数按 Winsock 约定为 int（CCNetSockLen 即 int）
     sent = sendto(inner->sock, (const char *)data, (int)size, 0, (struct sockaddr *)&ss, len);
 #else
     sent = (int)sendto(inner->sock, data, (size_t)size, 0, (struct sockaddr *)&ss, len);
@@ -135,14 +142,14 @@ static CCINT64 _udp_recvfrom(void *ctx, CCNetAddr *from, void *buf, CCUINT64 cap
     DWORD bytes;
     DWORD flags;
     struct sockaddr_storage ss;
-    int from_len;
-    int ret;
+    int from_len;   // WSARecvFrom 的地址长度：Winsock 以 int 作为输入 / 输出
+    int ret;        // WSARecvFrom 的返回值：Winsock 为 int
     CCINT32 err;
 #else
     struct sockaddr_storage ss;
     struct iovec iov;
     struct msghdr msg;
-    ssize_t got;
+    ssize_t got;    // recvmsg 的返回类型：POSIX 为 ssize_t
 #endif
 
     if (!inner || !buf || cap == 0)
@@ -175,8 +182,9 @@ static CCINT64 _udp_recvfrom(void *ctx, CCNetAddr *from, void *buf, CCUINT64 cap
         return _ccnet_map_os(err);
     }
     if (from && from_len > 0)
-        _ccnet_addr_from_sock(from, (struct sockaddr *)&ss,
-                              (CCNetSockLen)from_len);
+        _ccnet_addr_from_sock(
+            from, (struct sockaddr *)&ss, (CCNetSockLen)from_len
+        );
     return (CCINT64)bytes;
 #else
     iov.iov_base = buf;

@@ -4,13 +4,13 @@
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-11
  * @Description: CRC-32 校验计算
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #ifndef _INCLUDE_CC_CRC_H_
 #define _INCLUDE_CC_CRC_H_
 
-#include "crystal_cluster.h"
+#include <crystal_cluster.h>
 
 /**
  * CRC-32（IEEE 802.3）校验计算。

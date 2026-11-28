@@ -16,20 +16,18 @@
 #include <string.h>
 #include <stdio.h>
 
-/* 运行时状态：节点数组、根下标、exe 同层 res 目录 */
+// 运行时状态：节点数组、根下标、exe 同层 res 目录
 CCFsRuntime ccfiles_var;
 
-/* ch_root 回调当前所属父目录（用于把子红黑树新根写回 children_root） */
+// ch_root 回调当前所属父目录（用于把子红黑树新根写回 children_root）
 static CCUINT32 g_tree_parent = CC_FS_NIL;
 
-/* 仅本文件使用的前置声明（定义在探针生命周期段） */
+// 仅本文件使用的前置声明（定义在探针生命周期段）
 static void fs_invalidate_probes(CCUINT32 idx);
 
-/*
- * ============================================================================
+/* ============================================================================
  * 红黑树操作集：把「下标索引的连续节点」适配为「指针语义」的 CC_RbtOps 接口
- * ==========================================================================
- */
+ * ========================================================================== */
 
 static CCINT32 fs_compare_key(void *user, void *node, CCUINTPTR key)
 {
@@ -44,8 +42,8 @@ static CCINT32 fs_compare_node(void *user, void *node_1, void *node_2)
     return strcmp(((CCFsNode *)node_1)->name, ((CCFsNode *)node_2)->name);
 }
 
-/* 删除双子节点时，内核把后继节点数据拷入被删槽位；
- * 除树结构字段与 probe_head 外，数据字段必须一并拷贝。 */
+// 删除双子节点时，内核把后继节点数据拷入被删槽位；
+// 除树结构字段与 probe_head 外，数据字段必须一并拷贝。
 static CCINT32 fs_copy_node(void *user, void *dst_node, void *src_node)
 {
     CC_UNUSED(user);
@@ -60,7 +58,7 @@ static CCINT32 fs_copy_node(void *user, void *dst_node, void *src_node)
     dst->ctime = src->ctime;
     dst->mtime = src->mtime;
     dst->crc32 = src->crc32;
-    /* 常驻句柄的所有权随之转移：漏拷会泄漏 FILE*（Windows 下文件再也删不掉） */
+    // 常驻句柄的所有权随之转移：漏拷会泄漏 FILE*（Windows 下文件再也删不掉）
     dst->fp = src->fp;
     dst->fp_pos = src->fp_pos;
     dst->fp_writable = src->fp_writable;
@@ -196,7 +194,7 @@ static CCINT32 fs_right_rotate(void *user, void *node)
     return 0;
 }
 
-/* 子红黑树根变化：把新根下标写回其父目录的 children_root */
+// 子红黑树根变化：把新根下标写回其父目录的 children_root
 static void fs_ch_root(void *user, void *new_root)
 {
     CC_UNUSED(user);
@@ -235,13 +233,14 @@ void fs_mount_free(CCFsMount *m)
 
 CCFsMount *fs_mount_new(const char *real_path, CCUINT32 type, CCUINT8 origin)
 {
-    CCFsMount *m = (CCFsMount *)ccalloc(NULL, sizeof(CCFsMount),
-                                        CC_DBG_REL_TAG("文件挂载信息", NULL));
+    CCFsMount *m = (CCFsMount *)ccalloc(
+        NULL, sizeof(CCFsMount),
+        CC_DBG_REL_TAG("文件挂载信息", NULL)
+    );
     if (!m)
         return NULL;
-    m->real_path = real_path ? fs_strdup(real_path,
-                                         CC_DBG_REL_TAG("文件挂载真实路径", NULL))
-                             : NULL;
+    m->real_path =
+        real_path ? fs_strdup(real_path, CC_DBG_REL_TAG("文件挂载真实路径", NULL)) : NULL;
     if (real_path && !m->real_path)
     {
         ccalloc(m, 0, NULL);
@@ -254,7 +253,7 @@ CCFsMount *fs_mount_new(const char *real_path, CCUINT32 type, CCUINT8 origin)
     return m;
 }
 
-/* 追加一个新槽位（纯追加，配合 swap-remove 保持数组紧凑） */
+// 追加一个新槽位（纯追加，配合 swap-remove 保持数组紧凑）
 static CCUINT32 fs_alloc_slot(void)
 {
     CCFsNode zero;
@@ -266,18 +265,23 @@ static CCUINT32 fs_alloc_slot(void)
     zero.children_root = CC_FS_NIL;
     zero.is_red = CCFALSE;
     zero.probe_head = NULL;
-    if (cc_dyn_core_push(&ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
-                         (CCINT32)sizeof(CCFsNode), &zero) != 0)
+    if (cc_dyn_core_push(
+            &ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
+            (CCINT32)sizeof(CCFsNode), &zero
+        ) != 0
+    )
         return CC_FS_NIL;
     return node_count() - 1;
 }
 
-/* 回滚最近一次分配：创建节点失败时回收刚追加的末尾槽位 */
+// 回滚最近一次分配：创建节点失败时回收刚追加的末尾槽位
 void fs_alloc_rollback(void)
 {
     CCFsNode tmp;
-    cc_dyn_core_pop(&ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
-                    (CCINT32)sizeof(CCFsNode), &tmp);
+    cc_dyn_core_pop(
+        &ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
+        (CCINT32)sizeof(CCFsNode), &tmp
+    );
 }
 
 /* ============================================================================
@@ -294,7 +298,7 @@ CCUINT32 fs_child_get_idx(CCUINT32 parent_idx, const char *name)
     return hit ? idx_of(hit) : CC_FS_NIL;
 }
 
-/* 把 child 插入 parent 的子红黑树；成功 0，重复 1，参数 -1，内存不足 1 */
+// 把 child 插入 parent 的子红黑树；成功 0，重复 1，参数 -1，内存不足 1
 CCINT32 fs_insert_child(CCUINT32 parent_idx, CCUINT32 child_idx)
 {
     CCUINT32 root_idx = node_at(parent_idx)->children_root;
@@ -303,9 +307,15 @@ CCINT32 fs_insert_child(CCUINT32 parent_idx, CCUINT32 child_idx)
     return cc_rbt_core_insert(&fs_tree_ops, root, node_at(child_idx));
 }
 
-/* 新建节点并挂到 parent 下（不插入树），返回下标 */
-CCUINT32 fs_create_node(CCUINT32 parent_idx, const char *name,
-                        CCFsType type, const char *real_path, CCUINT32 mount_type, CCUINT8 origin)
+// 新建节点并挂到 parent 下（不插入树），返回下标
+CCUINT32 fs_create_node(
+    CCUINT32 parent_idx,
+    const char *name,
+    CCFsType type,
+    const char *real_path,
+    CCUINT32 mount_type,
+    CCUINT8 origin
+)
 {
     CCUINT32 idx = fs_alloc_slot();
     if (idx == CC_FS_NIL)
@@ -348,7 +358,7 @@ typedef struct cc_fs_fix_parent_ctx
     CCUINT32 new_parent;
 } CCFsFixParentCtx;
 
-/* swap-remove 搬移目录时，修正其所有子节点的 fs_parent */
+// swap-remove 搬移目录时，修正其所有子节点的 fs_parent
 static CCINT32 fs_fix_fs_parent_cb(void *data, void *user)
 {
     CCFsNode *n = (CCFsNode *)data;
@@ -357,7 +367,7 @@ static CCINT32 fs_fix_fs_parent_cb(void *data, void *user)
     return 0;
 }
 
-/* 把 dir 的全部直接子节点 fs_parent 指向 new_parent（子树整体换父时使用） */
+// 把 dir 的全部直接子节点 fs_parent 指向 new_parent（子树整体换父时使用）
 void fs_set_children_parent(CCUINT32 dir_idx, CCUINT32 new_parent)
 {
     CCUINT32 root_idx = node_at(dir_idx)->children_root;
@@ -365,19 +375,18 @@ void fs_set_children_parent(CCUINT32 dir_idx, CCUINT32 new_parent)
         return;
     CCFsFixParentCtx ctx;
     ctx.new_parent = new_parent;
-    cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                  node_at(root_idx), &ctx, fs_fix_fs_parent_cb);
+    cc_rbt_core_inorder_tranverse(&fs_tree_ops, node_at(root_idx), &ctx, fs_fix_fs_parent_cb);
 }
 
-/* 把已从树中摘除的槽位 swap-remove 掉，并修正所有指向末尾节点的引用。
-   调用方负责先释放该槽位的 name / mount 等业务资源。 */
+// 把已从树中摘除的槽位 swap-remove 掉，并修正所有指向末尾节点的引用。
+// 调用方负责先释放该槽位的 name / mount 等业务资源。
 static void fs_remove_slot(CCUINT32 y_idx)
 {
     CCUINT32 last_idx = node_count() - 1;
     if (y_idx != last_idx)
     {
         CCFsNode *last = node_at(last_idx);
-        /* 修正名称树中指向末尾节点的引用 */
+        // 修正名称树中指向末尾节点的引用
         if (last->parent != CC_FS_NIL)
         {
             CCFsNode *pp = node_at(last->parent);
@@ -400,16 +409,17 @@ static void fs_remove_slot(CCUINT32 y_idx)
         if (last->right != CC_FS_NIL)
             node_at(last->right)->parent = y_idx;
 
-        /* 修正末尾节点的子节点 fs_parent（若它是目录） */
+        // 修正末尾节点的子节点 fs_parent（若它是目录）
         if (last->children_root != CC_FS_NIL)
         {
             CCFsFixParentCtx ctx;
             ctx.new_parent = y_idx;
-            cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                          node_at(last->children_root), &ctx, fs_fix_fs_parent_cb);
+            cc_rbt_core_inorder_tranverse(
+                &fs_tree_ops, node_at(last->children_root), &ctx, fs_fix_fs_parent_cb
+            );
         }
 
-        /* 指向末尾节点的探针 cur 跟随 */
+        // 指向末尾节点的探针 cur 跟随
         for (CCFsProbeRef *pr = last->probe_head; pr; pr = pr->next)
             if (pr->probe)
                 pr->probe->cur = y_idx;
@@ -417,13 +427,19 @@ static void fs_remove_slot(CCUINT32 y_idx)
         *node_at(y_idx) = *last;
     }
     CCFsNode tmp;
-    cc_dyn_core_pop(&ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
-                    (CCINT32)sizeof(CCFsNode), &tmp);
+    cc_dyn_core_pop(
+        &ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
+        (CCINT32)sizeof(CCFsNode), &tmp
+    );
 }
 
-/* 下标搬移跟踪：用于事务提交阶段，保证调用方持有的关键节点下标始终有效 */
-static void fs_watch_relocate(CCUINT32 *watch, CCUINT32 count,
-                              CCUINT32 from, CCUINT32 to)
+// 下标搬移跟踪：用于事务提交阶段，保证调用方持有的关键节点下标始终有效
+static void fs_watch_relocate(
+    CCUINT32 *watch,
+    CCUINT32 count,
+    CCUINT32 from,
+    CCUINT32 to
+)
 {
     if (!watch || from == to)
         return;
@@ -432,11 +448,17 @@ static void fs_watch_relocate(CCUINT32 *watch, CCUINT32 count,
             watch[i] = to;
 }
 
-/* 从父目录子红黑树中按名删除，并释放被删条目数据；swap-remove 保持数组紧凑。
-   两组 watch 均可跟踪节点下标搬移；提交阶段用它保护 stage 根等关键节点，
-   批量删除则用第一组跟踪待删表自身。 */
-static CCINT32 fs_remove_child_watch(CCUINT32 parent_idx, const char *name,
-                                     CCUINT32 *watch, CCUINT32 count, CCUINT32 *watch2, CCUINT32 count2)
+// 从父目录子红黑树中按名删除，并释放被删条目数据；swap-remove 保持数组紧凑。
+// 两组 watch 均可跟踪节点下标搬移；提交阶段用它保护 stage 根等关键节点，
+// 批量删除则用第一组跟踪待删表自身。
+static CCINT32 fs_remove_child_watch(
+    CCUINT32 parent_idx,
+    const char *name,
+    CCUINT32 *watch,
+    CCUINT32 count,
+    CCUINT32 *watch2,
+    CCUINT32 count2
+)
 {
     if (parent_idx == CC_FS_NIL || !name)
         return CC_FS_ERR_PARAM;
@@ -453,8 +475,8 @@ static CCINT32 fs_remove_child_watch(CCUINT32 parent_idx, const char *name,
     char *z_name = node_at(z_idx)->name;
     CCFsMount *z_mount = node_at(z_idx)->mount;
 
-    /* 被删条目指向的探针失效；其常驻读写句柄随之 flush + fclose。
-       删除路径的调用方已先做 fs_fh_close_all，此处仅兜底。 */
+    // 被删条目指向的探针失效；其常驻读写句柄随之 flush + fclose。
+    // 删除路径的调用方已先做 fs_fh_close_all，此处仅兜底。
     fs_invalidate_probes(z_idx);
 
     g_tree_parent = parent_idx;
@@ -465,8 +487,8 @@ static CCINT32 fs_remove_child_watch(CCUINT32 parent_idx, const char *name,
 
     if (y_idx != z_idx)
     {
-        /* 后继被拷入 z 槽位：修正其子树根的 fs_parent，并让后继的探针回指跟随
-           （句柄随整个节点结构一起搬到 z 槽位，无需按节点下标另存） */
+        // 后继被拷入 z 槽位：修正其子树根的 fs_parent，并让后继的探针回指跟随
+        // （句柄随整个节点结构一起搬到 z 槽位，无需按节点下标另存）
         CCFsNode *zt = node_at(z_idx);
         if (zt->children_root != CC_FS_NIL)
             node_at(zt->children_root)->fs_parent = z_idx;
@@ -509,28 +531,28 @@ typedef struct cc_fs_collect_ctx
     CCDyn *stack;
 } CCFsCollectCtx;
 
-/* 收集子树时，把子节点下标压入显式栈 */
+// 收集子树时，把子节点下标压入显式栈
 static CCINT32 fs_collect_child_cb(void *data, void *user)
 {
     CCFsNode *n = (CCFsNode *)data;
     CCFsCollectCtx *c = (CCFsCollectCtx *)user;
     CCUINT32 idx = idx_of(n);
-    return cc_dyn_core_push(c->stack, (CCUINT32)sizeof(CCUINT32),
-                            (CCINT32)sizeof(CCUINT32), &idx) != 0
-               ? 1
-               : 0;
+    return cc_dyn_core_push(
+        c->stack, (CCUINT32)sizeof(CCUINT32),
+        (CCINT32)sizeof(CCUINT32), &idx
+    ) != 0 ? 1 : 0;
 }
 
-/* 收集某目录全部直接子节点下标（先收集再处理，避免遍历中被 realloc 打断） */
+// 收集某目录全部直接子节点下标（先收集再处理，避免遍历中被 realloc 打断）
 static CCINT32 fs_collect_cb(void *data, void *user)
 {
     CCFsNode *n = (CCFsNode *)data;
     CCDyn *d = (CCDyn *)user;
     CCUINT32 idx = idx_of(n);
-    return cc_dyn_core_push(d, (CCUINT32)sizeof(CCUINT32),
-                            (CCINT32)sizeof(CCUINT32), &idx) != 0
-               ? 1
-               : 0;
+    return cc_dyn_core_push(
+        d, (CCUINT32)sizeof(CCUINT32),
+        (CCINT32)sizeof(CCUINT32), &idx
+    ) != 0 ? 1 : 0;
 }
 
 CCINT32 fs_collect_children_ex(CCUINT32 dir_idx, CCDyn *out)
@@ -540,10 +562,9 @@ CCINT32 fs_collect_children_ex(CCUINT32 dir_idx, CCDyn *out)
     CCUINT32 root_idx = node_at(dir_idx)->children_root;
     if (root_idx == CC_FS_NIL)
         return CC_FS_OK;
-    return cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                         node_at(root_idx), out, fs_collect_cb) == 0
-               ? CC_FS_OK
-               : CC_FS_ERR_NOSPACE;
+    return cc_rbt_core_inorder_tranverse(
+        &fs_tree_ops, node_at(root_idx), out, fs_collect_cb
+    ) == 0 ? CC_FS_OK : CC_FS_ERR_NOSPACE;
 }
 
 void fs_collect_children(CCUINT32 dir_idx, CCDyn *out)
@@ -551,22 +572,24 @@ void fs_collect_children(CCUINT32 dir_idx, CCDyn *out)
     (void)fs_collect_children_ex(dir_idx, out);
 }
 
-/* 不分配内存地遍历某目录的直接子节点 */
-CCINT32 fs_children_walk(CCUINT32 dir_idx, void *user,
-                         CCINT32 (*cb)(void *data, void *user))
+// 不分配内存地遍历某目录的直接子节点
+CCINT32 fs_children_walk(
+    CCUINT32 dir_idx,
+    void *user,
+    CCINT32 (*cb)(void *data, void *user)
+)
 {
     if (dir_idx == CC_FS_NIL || !cb)
         return CC_FS_ERR_PARAM;
     CCUINT32 root_idx = node_at(dir_idx)->children_root;
     if (root_idx == CC_FS_NIL)
         return CC_FS_OK;
-    return cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                         node_at(root_idx), user, cb) == 0
-               ? CC_FS_OK
-               : CC_FS_ERR_NOSPACE;
+    return cc_rbt_core_inorder_tranverse(
+        &fs_tree_ops, node_at(root_idx), user, cb
+    ) == 0 ? CC_FS_OK : CC_FS_ERR_NOSPACE;
 }
 
-/* 收集 idx 的后代（include_self 决定是否含 idx 本身）到 list，下标此刻稳定 */
+// 收集 idx 的后代（include_self 决定是否含 idx 本身）到 list，下标此刻稳定
 static CCINT32 fs_collect_tree(CCUINT32 idx, CCBOOL include_self, CCDyn *list)
 {
     CCDyn stack;
@@ -575,8 +598,11 @@ static CCINT32 fs_collect_tree(CCUINT32 idx, CCBOOL include_self, CCDyn *list)
 
     if (include_self)
     {
-        if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCUINT32),
-                             (CCINT32)sizeof(CCUINT32), &idx) != 0)
+        if (cc_dyn_core_push(
+                &stack, (CCUINT32)sizeof(CCUINT32),
+                (CCINT32)sizeof(CCUINT32), &idx
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_NOSPACE;
             goto FailedtoPushRoot;
@@ -586,8 +612,11 @@ static CCINT32 fs_collect_tree(CCUINT32 idx, CCBOOL include_self, CCDyn *list)
     {
         CCFsCollectCtx ctx;
         ctx.stack = &stack;
-        if (cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                          node_at(node_at(idx)->children_root), &ctx, fs_collect_child_cb) != 0)
+        if (cc_rbt_core_inorder_tranverse(
+                &fs_tree_ops, node_at(node_at(idx)->children_root),
+                &ctx, fs_collect_child_cb
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_NOSPACE;
             goto FailedtoPushChildren;
@@ -597,14 +626,20 @@ static CCINT32 fs_collect_tree(CCUINT32 idx, CCBOOL include_self, CCDyn *list)
     while (stack.size >= (CCUINT32)sizeof(CCUINT32))
     {
         CCUINT32 cur;
-        if (cc_dyn_core_pop(&stack, (CCUINT32)sizeof(CCUINT32),
-                            (CCINT32)sizeof(CCUINT32), &cur) != 0)
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCUINT32),
+                (CCINT32)sizeof(CCUINT32), &cur
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_IO;
             goto FailedtoPushRoot;
         }
-        if (cc_dyn_core_push(list, (CCUINT32)sizeof(CCUINT32),
-                             (CCINT32)sizeof(CCUINT32), &cur) != 0)
+        if (cc_dyn_core_push(
+                list, (CCUINT32)sizeof(CCUINT32),
+                (CCINT32)sizeof(CCUINT32), &cur
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_NOSPACE;
             goto FailedtoPushList;
@@ -613,8 +648,11 @@ static CCINT32 fs_collect_tree(CCUINT32 idx, CCBOOL include_self, CCDyn *list)
         {
             CCFsCollectCtx ctx;
             ctx.stack = &stack;
-            if (cc_rbt_core_inorder_tranverse(&fs_tree_ops,
-                                              node_at(node_at(cur)->children_root), &ctx, fs_collect_child_cb) != 0)
+            if (cc_rbt_core_inorder_tranverse(
+                    &fs_tree_ops, node_at(node_at(cur)->children_root),
+                    &ctx, fs_collect_child_cb
+                ) != 0
+            )
             {
                 ret = CC_FS_ERR_NOSPACE;
                 goto FailedtoPushChildren;
@@ -632,18 +670,22 @@ FailedtoPushRoot:
     return ret;
 }
 
-/* 预先收集以 idx 为根的整棵子树，供事务提交前预检内存、失败时不改动旧树 */
+// 预先收集以 idx 为根的整棵子树，供事务提交前预检内存、失败时不改动旧树
 CCINT32 fs_collect_subtree(CCUINT32 idx, CCDyn *out)
 {
     return fs_collect_tree(idx, CCTRUE, out);
 }
 
-/* 按「先序的逆序」删除 list 中的节点：先序保证父节点先于所有后代出现，
-   反转后即保证后代先于父节点删除。删除过程中的 swap-remove / 后继拷入会
-   搬动下标，因此直接把待删表当作第一组 watch 原地修正，外部 watch 作为
-   第二组同步修正，全程不再分配内存。 */
-CCINT32 fs_delete_list_watch(CCDyn *list, CCBOOL unlink_physical,
-                             CCUINT32 *watch, CCUINT32 watch_count)
+// 按「先序的逆序」删除 list 中的节点：先序保证父节点先于所有后代出现，
+// 反转后即保证后代先于父节点删除。删除过程中的 swap-remove / 后继拷入会
+// 搬动下标，因此直接把待删表当作第一组 watch 原地修正，外部 watch 作为
+// 第二组同步修正，全程不再分配内存。
+CCINT32 fs_delete_list_watch(
+    CCDyn *list,
+    CCBOOL unlink_physical,
+    CCUINT32 *watch,
+    CCUINT32 watch_count
+)
 {
     CCINT32 ret = CC_FS_OK;
     CCUINT32 *arr = (CCUINT32 *)list->array;
@@ -666,7 +708,7 @@ CCINT32 fs_delete_list_watch(CCDyn *list, CCBOOL unlink_physical,
         CCFsNode *n = node_at(cur);
         if (unlink_physical)
         {
-            /* 先 flush + fclose（Windows 下不关就删不掉），再删物理 */
+            // 先 flush + fclose（Windows 下不关就删不掉），再删物理
             CCINT32 r = fs_physical_delete(cur);
             if (r != CC_FS_OK && ret == CC_FS_OK)
                 ret = r;
@@ -681,7 +723,7 @@ CCINT32 fs_delete_list_watch(CCDyn *list, CCBOOL unlink_physical,
         char *nm = n->name;
         if (parent_idx == CC_FS_NIL)
         {
-            /* 已脱离名称树的根：直接释放业务资源并回收槽位 */
+            // 已脱离名称树的根：直接释放业务资源并回收槽位
             fs_invalidate_probes(cur);
             CCFsMount *mount = n->mount;
             if (mount)
@@ -694,18 +736,21 @@ CCINT32 fs_delete_list_watch(CCDyn *list, CCBOOL unlink_physical,
             fs_remove_slot(cur);
             continue;
         }
-        CCINT32 rr = fs_remove_child_watch(parent_idx, nm,
-                                           arr, cnt, watch, watch_count);
+        CCINT32 rr = fs_remove_child_watch(parent_idx, nm, arr, cnt, watch, watch_count);
         if (rr != CC_FS_OK && ret == CC_FS_OK)
             ret = rr;
     }
     return ret;
 }
 
-/* 删除以 idx 为根的子树（含 idx 本身）；无递归。
-   watch 中的下标会随 swap-remove / 后继拷入自动修正。 */
-CCINT32 fs_delete_subtree_watch(CCUINT32 idx, CCBOOL unlink_physical,
-                                CCUINT32 *watch, CCUINT32 watch_count)
+// 删除以 idx 为根的子树（含 idx 本身）；无递归。
+// watch 中的下标会随 swap-remove / 后继拷入自动修正。
+CCINT32 fs_delete_subtree_watch(
+    CCUINT32 idx,
+    CCBOOL unlink_physical,
+    CCUINT32 *watch,
+    CCUINT32 watch_count
+)
 {
     if (idx == CC_FS_NIL)
         return CC_FS_OK;
@@ -723,7 +768,7 @@ CCINT32 fs_delete_subtree_ex(CCUINT32 idx, CCBOOL unlink_physical)
     return fs_delete_subtree_watch(idx, unlink_physical, NULL, 0);
 }
 
-/* 删除 idx 的所有后代（不含 idx 本身）；无递归 */
+// 删除 idx 的所有后代（不含 idx 本身）；无递归
 CCINT32 fs_delete_children(CCUINT32 idx, CCBOOL unlink_physical)
 {
     if (idx == CC_FS_NIL)
@@ -737,14 +782,14 @@ CCINT32 fs_delete_children(CCUINT32 idx, CCBOOL unlink_physical)
     return ret;
 }
 
-/* 只删虚拟节点、不记录物理删除（refresh / unmount / 事务收尾使用） */
+// 只删虚拟节点、不记录物理删除（refresh / unmount / 事务收尾使用）
 void fs_delete_subtree(CCUINT32 idx)
 {
     fs_delete_subtree_ex(idx, CCFALSE);
 }
 
-/* 释放一个已脱离名称树、且没有子节点的空壳节点（事务 stage 收尾）。
-   不分配内存，因此不会在提交后半段失败。 */
+// 释放一个已脱离名称树、且没有子节点的空壳节点（事务 stage 收尾）。
+// 不分配内存，因此不会在提交后半段失败。
 void fs_discard_detached_node(CCUINT32 idx)
 {
     if (idx == CC_FS_NIL || idx >= node_count())
@@ -763,7 +808,7 @@ void fs_discard_detached_node(CCUINT32 idx)
  * 初始化 / 反初始化
  * ========================================================================== */
 
-/* 探针 cur 指向节点：把探针回指头插到节点链表，并标记探针有效 */
+// 探针 cur 指向节点：把探针回指头插到节点链表，并标记探针有效
 void fs_node_ref(CCFiles *fs, CCUINT32 idx)
 {
     CCFsNode *n = node_at(idx);
@@ -776,7 +821,7 @@ void fs_node_ref(CCFiles *fs, CCUINT32 idx)
     fs->alive = CCTRUE;
 }
 
-/* 探针离开节点：从节点链表摘除自身回指；若这是最后一个引用，立即 flush + fclose */
+// 探针离开节点：从节点链表摘除自身回指；若这是最后一个引用，立即 flush + fclose
 void fs_node_unref(CCFiles *fs)
 {
     CCUINT32 idx = fs->cur;
@@ -794,10 +839,10 @@ void fs_node_unref(CCFiles *fs)
     fs->alive = CCFALSE;
 
     if (idx != CC_FS_NIL && idx < node_count() && node_at(idx)->probe_head == NULL)
-        fs_fh_close(idx); /* 无探针再指向该节点：句柄不再需要常驻 */
+        fs_fh_close(idx); // 无探针再指向该节点：句柄不再需要常驻
 }
 
-/* 删除节点时：失效所有指向它的探针（多探针场景），并关闭其常驻句柄 */
+// 删除节点时：失效所有指向它的探针（多探针场景），并关闭其常驻句柄
 static void fs_invalidate_probes(CCUINT32 idx)
 {
     CCFsNode *n = node_at(idx);
@@ -839,8 +884,11 @@ void init_ccfiles(void)
     zero.fs_parent = CC_FS_NIL;
     zero.children_root = CC_FS_NIL;
     zero.is_red = CCFALSE;
-    if (cc_dyn_core_push(&ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
-                         (CCINT32)sizeof(CCFsNode), &zero) != 0)
+    if (cc_dyn_core_push(
+            &ccfiles_var.nodes, (CCUINT32)sizeof(CCFsNode),
+            (CCINT32)sizeof(CCFsNode), &zero
+        ) != 0
+    )
         return;
 
     ccfiles_var.root = 0;
@@ -857,7 +905,7 @@ void init_ccfiles(void)
 
 void deinit_ccfiles(void)
 {
-    fs_fh_close_all(); /* 先落盘并关闭所有常驻句柄 */
+    fs_fh_close_all(); // 先落盘并关闭所有常驻句柄
 
     CCUINT32 count = node_count();
     for (CCUINT32 i = 0; i < count; i++)
@@ -891,8 +939,10 @@ CCFiles *ccfiles_create(void)
 {
     if (ccfiles_var.root == CC_FS_NIL)
         return NULL;
-    CCFiles *fs = (CCFiles *)ccalloc(NULL, sizeof(CCFiles),
-                                     CC_DBG_REL_TAG("文件探针", NULL));
+    CCFiles *fs = (CCFiles *)ccalloc(
+        NULL, sizeof(CCFiles),
+        CC_DBG_REL_TAG("文件探针", NULL)
+    );
     if (!fs)
         return NULL;
     fs->alive = CCTRUE;
@@ -929,7 +979,7 @@ CCINT32 ccfiles_chdir(CCFiles *fs, const char *path)
     fs->cwd = idx;
     return CC_FS_OK;
 }
-/* 把节点下标转换为绝对虚拟路径（写入 out，调用方负责 fs_buf_free） */
+// 把节点下标转换为绝对虚拟路径（写入 out，调用方负责 fs_buf_free）
 static CCINT32 fs_path_of_idx(CCUINT32 idx, CCDyn *out)
 {
     if (!out || idx == CC_FS_NIL)
@@ -949,8 +999,11 @@ static CCINT32 fs_path_of_idx(CCUINT32 idx, CCDyn *out)
         CCUINT32 cur = idx;
         while (cur != root && cur != CC_FS_NIL)
         {
-            if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCUINT32),
-                                 (CCINT32)sizeof(CCUINT32), &cur) != 0)
+            if (cc_dyn_core_push(
+                    &stack, (CCUINT32)sizeof(CCUINT32),
+                    (CCINT32)sizeof(CCUINT32), &cur
+                ) != 0
+            )
             {
                 ret = CC_FS_ERR_NOSPACE;
                 goto FailedtoPushPath;
@@ -958,7 +1011,7 @@ static CCINT32 fs_path_of_idx(CCUINT32 idx, CCDyn *out)
             cur = node_at(cur)->fs_parent;
         }
         if (cur != root)
-            ret = CC_FS_ERR_NOENT; /* 下标已脱离根链 */
+            ret = CC_FS_ERR_NOENT; // 下标已脱离根链
         CCUINT32 count = stack.size / (CCUINT32)sizeof(CCUINT32);
         CCUINT32 *arr = (CCUINT32 *)stack.array;
         for (CCINT32 i = (CCINT32)count - 1; ret == CC_FS_OK && i >= 0; i--)
@@ -977,7 +1030,7 @@ FailedtoPushPath:
     return CC_FS_ERR_NOSPACE;
 }
 
-/* 公共辅助：路径写入调用方缓冲；容量不足返回 CC_FS_ERR_PARAM，成功返回含 '\0' 的长度 */
+// 公共辅助：路径写入调用方缓冲；容量不足返回 CC_FS_ERR_PARAM，成功返回含 '\0' 的长度
 static CCINT32 fs_copy_path_to_buf(CCUINT32 idx, char *buf, CCUINT32 size)
 {
     if (!buf || size == 0)
@@ -990,7 +1043,7 @@ static CCINT32 fs_copy_path_to_buf(CCUINT32 idx, char *buf, CCUINT32 size)
     {
         const char *s = fs_buf_str(&path);
         CCUINT32 len = (CCUINT32)strlen(s);
-        /* 用户提供的缓冲区容量是外部约束，超出则明确返回参数错误 */
+        // 用户提供的缓冲区容量是外部约束，超出则明确返回参数错误
         if (len + 1 > size)
             ret = CC_FS_ERR_PARAM;
         else
@@ -1049,7 +1102,7 @@ typedef struct cc_fs_list_ctx
     void *user;
 } CCFsListCtx;
 
-/* 把节点打包成公开条目；仅在本次回调期间有效 */
+// 把节点打包成公开条目；仅在本次回调期间有效
 static void fs_make_entry(CCFsNode *n, CCFsEntry *e)
 {
     e->name = n->name;
@@ -1095,9 +1148,13 @@ CCINT32 ccfiles_list(CCFiles *fs, const char *v_path, CCDataCallback cbk, void *
     return cc_rbt_core_inorder_tranverse(&fs_tree_ops, node_at(root_idx), &ctx, fs_list_cb);
 }
 
-/* 递归检索整棵子树；用显式栈而不是 C 递归，避免深目录耗尽调用栈。 */
-static CCINT32 fs_find_descendants(CCUINT32 root_idx, const char *pattern,
-                                   CCDataCallback cbk, void *user)
+// 递归检索整棵子树；用显式栈而不是 C 递归，避免深目录耗尽调用栈。
+static CCINT32 fs_find_descendants(
+    CCUINT32 root_idx,
+    const char *pattern,
+    CCDataCallback cbk,
+    void *user
+)
 {
     CCDyn stack;
     memset(&stack, 0, sizeof(stack));
@@ -1105,27 +1162,33 @@ static CCINT32 fs_find_descendants(CCUINT32 root_idx, const char *pattern,
     memset(&kids, 0, sizeof(kids));
     CCINT32 ret = CC_FS_OK;
 
-    if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCUINT32),
-                         (CCINT32)sizeof(CCINT32), &root_idx) != 0)
+    if (cc_dyn_core_push(
+            &stack, (CCUINT32)sizeof(CCUINT32),
+            (CCINT32)sizeof(CCINT32), &root_idx
+        ) != 0
+    )
     {
         ret = CC_FS_ERR_NOSPACE;
-        goto Done;
+        goto Cleanup;
     }
 
     while (stack.size >= (CCUINT32)sizeof(CCUINT32))
     {
         CCUINT32 cur = CC_FS_NIL;
-        if (cc_dyn_core_pop(&stack, (CCUINT32)sizeof(CCUINT32),
-                            (CCINT32)sizeof(CCINT32), &cur) != 0)
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCUINT32),
+                (CCINT32)sizeof(CCINT32), &cur
+            ) != 0
+        )
         {
             ret = CC_FS_ERR_IO;
-            goto Done;
+            goto Cleanup;
         }
 
         kids.size = 0;
         ret = fs_collect_children_ex(cur, &kids);
         if (ret != CC_FS_OK)
-            goto Done;
+            goto Cleanup;
 
         CCUINT32 count = kids.size / (CCUINT32)sizeof(CCUINT32);
         CCUINT32 *arr = (CCUINT32 *)kids.array;
@@ -1143,23 +1206,26 @@ static CCINT32 fs_find_descendants(CCUINT32 root_idx, const char *pattern,
                 if (cb_ret != 0)
                 {
                     ret = cb_ret;
-                    goto Done;
+                    goto Cleanup;
                 }
             }
 
             if (n->type == CC_FS_TYPE_DIR)
             {
-                if (cc_dyn_core_push(&stack, (CCUINT32)sizeof(CCUINT32),
-                                     (CCINT32)sizeof(CCINT32), &arr[i]) != 0)
+                if (cc_dyn_core_push(
+                        &stack, (CCUINT32)sizeof(CCUINT32),
+                        (CCINT32)sizeof(CCINT32), &arr[i]
+                    ) != 0
+                )
                 {
                     ret = CC_FS_ERR_NOSPACE;
-                    goto Done;
+                    goto Cleanup;
                 }
             }
         }
     }
 
-Done:
+Cleanup:
     if (kids.array)
         ccalloc(kids.array, 0, NULL);
     if (stack.array)
@@ -1167,8 +1233,13 @@ Done:
     return ret;
 }
 
-CCINT32 ccfiles_find(CCFiles *fs, const char *v_path, const char *pattern,
-                     CCDataCallback cbk, void *user)
+CCINT32 ccfiles_find(
+    CCFiles *fs,
+    const char *v_path,
+    const char *pattern,
+    CCDataCallback cbk,
+    void *user
+)
 {
     if (!fs || !v_path || !pattern || !cbk)
         return CC_FS_ERR_PARAM;
@@ -1185,4 +1256,243 @@ CCINT32 ccfiles_find(CCFiles *fs, const char *v_path, const char *pattern,
         return CC_FS_OK;
 
     return fs_find_descendants(idx, pattern, cbk, user);
+}
+
+/* ============================================================================
+ * 扩展检索与真实路径反查
+ * ========================================================================== */
+
+typedef struct cc_fs_find_frame
+{
+    CCUINT32 idx;
+    CCUINT32 depth;
+} CCFsFindFrame;
+
+// 构造 idx 相对 root_idx 的路径；rel 复用，仅在本次回调期间有效。
+static CCINT32 fs_find_relative_path(
+    CCUINT32 root_idx,
+    CCUINT32 idx,
+    CCDyn *rel
+)
+{
+    CCDyn chain;
+    memset(&chain, 0, sizeof(chain));
+    CCUINT32 cur = idx;
+    while (cur != root_idx)
+    {
+        if (cur == CC_FS_NIL)
+        {
+            fs_buf_free(&chain);
+            return CC_FS_ERR_PARAM;
+        }
+        if (cc_dyn_core_push(
+                &chain, (CCUINT32)sizeof(CCUINT32),
+                (CCINT32)sizeof(CCUINT32), &cur
+            ) != 0
+        )
+        {
+            fs_buf_free(&chain);
+            return CC_FS_ERR_NOSPACE;
+        }
+        cur = node_at(cur)->fs_parent;
+    }
+
+    fs_buf_clear(rel);
+    CCUINT32 count = chain.size / (CCUINT32)sizeof(CCUINT32);
+    CCUINT32 *items = (CCUINT32 *)chain.array;
+    for (CCINT32 i = (CCINT32)count - 1; i >= 0; i--)
+    {
+        CCFsNode *node = node_at(items[i]);
+        if (!node->name)
+        {
+            fs_buf_free(&chain);
+            return CC_FS_ERR_IO;
+        }
+        if (fs_buf_put(rel, node->name) != CC_FS_OK)
+        {
+            fs_buf_free(&chain);
+            return CC_FS_ERR_NOSPACE;
+        }
+        if (i > 0)
+        {
+            if (fs_buf_put(rel, "/") != CC_FS_OK)
+            {
+                fs_buf_free(&chain);
+                return CC_FS_ERR_NOSPACE;
+            }
+        }
+    }
+    fs_buf_free(&chain);
+    return CC_FS_OK;
+}
+
+static CCINT32 fs_find_descendants_ex(
+    CCUINT32 root_idx,
+    const char *pattern,
+    CCUINT32 max_depth,
+    CCDataCallback cbk,
+    void *user
+)
+{
+    CCDyn stack;
+    memset(&stack, 0, sizeof(stack));
+    CCDyn kids;
+    memset(&kids, 0, sizeof(kids));
+    CCDyn rel;
+    memset(&rel, 0, sizeof(rel));
+    CCINT32 ret = CC_FS_OK;
+
+    CCFsFindFrame root_frame;
+    root_frame.idx = root_idx;
+    root_frame.depth = 0;
+    if (cc_dyn_core_push(
+            &stack, (CCUINT32)sizeof(CCFsFindFrame),
+            (CCINT32)sizeof(CCFsFindFrame), &root_frame
+        ) != 0
+    )
+    {
+        ret = CC_FS_ERR_NOSPACE;
+        goto Cleanup;
+    }
+
+    while (stack.size >= (CCUINT32)sizeof(CCFsFindFrame))
+    {
+        CCFsFindFrame frame;
+        if (cc_dyn_core_pop(
+                &stack, (CCUINT32)sizeof(CCFsFindFrame),
+                (CCINT32)sizeof(CCFsFindFrame), &frame
+            ) != 0
+        )
+        {
+            ret = CC_FS_ERR_IO;
+            goto Cleanup;
+        }
+
+        kids.size = 0;
+        ret = fs_collect_children_ex(frame.idx, &kids);
+        if (ret != CC_FS_OK)
+            goto Cleanup;
+
+        CCUINT32 count = kids.size / (CCUINT32)sizeof(CCUINT32);
+        CCUINT32 *items = (CCUINT32 *)kids.array;
+        CCUINT32 child_depth = frame.depth + 1;
+        for (CCUINT32 i = 0; i < count; i++)
+        {
+            CCFsNode *node = node_at(items[i]);
+            if (node->type == CC_FS_TYPE_NONE || !node->name)
+                continue;
+
+            if (cc_wildcard(pattern, node->name))
+            {
+                ret = fs_find_relative_path(
+                    root_idx, items[i], &rel
+                );
+                if (ret != CC_FS_OK)
+                    goto Cleanup;
+
+                CCFsFindEntry entry;
+                entry.name = node->name;
+                entry.path = fs_buf_str(&rel);
+                entry.type = node->type;
+                entry.size = node->size;
+                entry.mtime = node->mtime;
+                CCINT32 cb_ret = cbk(&entry, user);
+                if (cb_ret != 0)
+                {
+                    ret = cb_ret;
+                    goto Cleanup;
+                }
+            }
+
+            if (node->type == CC_FS_TYPE_DIR)
+            {
+                if (max_depth != 0 && child_depth >= max_depth)
+                    continue;
+                CCFsFindFrame child;
+                child.idx = items[i];
+                child.depth = child_depth;
+                if (cc_dyn_core_push(
+                        &stack, (CCUINT32)sizeof(CCFsFindFrame),
+                        (CCINT32)sizeof(CCFsFindFrame), &child
+                    ) != 0
+                )
+                {
+                    ret = CC_FS_ERR_NOSPACE;
+                    goto Cleanup;
+                }
+            }
+        }
+    }
+
+Cleanup:
+    fs_buf_free(&rel);
+    if (kids.array)
+        ccalloc(kids.array, 0, NULL);
+    if (stack.array)
+        ccalloc(stack.array, 0, NULL);
+    return ret;
+}
+
+CCINT32 ccfiles_find_ex(
+    CCFiles *fs,
+    const char *v_path,
+    const char *pattern,
+    CCUINT32 max_depth,
+    CCDataCallback cbk,
+    void *user
+)
+{
+    if (!fs || !v_path || !pattern || !cbk)
+        return CC_FS_ERR_PARAM;
+    CCUINT32 idx = CC_FS_NIL;
+    CCINT32 r = fs_vwalk(fs, v_path, CCTRUE, NULL, NULL, &idx);
+    if (r != CC_FS_OK)
+        return r;
+    if (idx == CC_FS_NIL)
+        return CC_FS_ERR_NOENT;
+    if (node_at(idx)->type != CC_FS_TYPE_DIR)
+        return CC_FS_ERR_NOTDIR;
+
+    if (node_at(idx)->children_root == CC_FS_NIL)
+        return CC_FS_OK;
+
+    return fs_find_descendants_ex(idx, pattern, max_depth, cbk, user);
+}
+
+CCINT32 ccfiles_realpath(CCFiles *fs, const char *v_path, char **out_path)
+{
+    if (!fs || !v_path || !out_path)
+        return CC_FS_ERR_PARAM;
+    *out_path = NULL;
+    if (!fs->alive)
+        return CC_FS_ERR_PARAM;
+
+    CCUINT32 idx = CC_FS_NIL;
+    CCINT32 r = fs_vwalk(fs, v_path, CCTRUE, NULL, NULL, &idx);
+    if (r != CC_FS_OK)
+        return r;
+    if (idx == CC_FS_NIL)
+        return CC_FS_ERR_NOENT;
+
+    CCFsNode *node = node_at(idx);
+    if (node->mount && node->mount->real_path)
+    {
+        *out_path = fs_strdup(
+            node->mount->real_path,
+            CC_DBG_REL_TAG("真实路径", NULL)
+        );
+        return (*out_path) ? CC_FS_OK : CC_FS_ERR_NOSPACE;
+    }
+
+    CCUINT32 anchor = fs_find_anchor(idx);
+    if (anchor == CC_FS_NIL)
+        return CC_FS_ERR_NOPHYS;
+    CCFsMount *mount = node_at(anchor)->mount;
+    if (mount && mount->type == CC_FS_MOUNT_PKG)
+        return CC_FS_ERR_NOPHYS;
+
+    *out_path = fs_physical_dup(
+        idx, CC_DBG_REL_TAG("真实路径", NULL)
+    );
+    return (*out_path) ? CC_FS_OK : CC_FS_ERR_NOSPACE;
 }

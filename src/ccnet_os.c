@@ -8,6 +8,7 @@
  */
 
 #include "ccnet_internal.h"
+
 #include <limits.h>
 
 #ifndef CC_WINDOWS
@@ -133,13 +134,14 @@ CCINT32 _ccnet_set_timeout(CCNetSocket sock, CCBOOL recv, CCUINT32 us)
 {
 #ifdef CC_WINDOWS
     DWORD ms;
-    int level;
+    int level;      // setsockopt 的层级与选项名：Winsock 按 int 传参
     int name;
 #else
     struct timeval tv;
 #endif
 
     us = _ccnet_norm_timeout(us);
+    // 无限等待：超时值置 0，Windows 与 POSIX 都约定 0 表示不做超时限制
     if (us == CC_NET_TIMEOUT_INFINITE)
         us = 0;
 
@@ -153,8 +155,11 @@ CCINT32 _ccnet_set_timeout(CCNetSocket sock, CCBOOL recv, CCUINT32 us)
 #else
     tv.tv_sec = (time_t)(us / 1000000u);
     tv.tv_usec = (suseconds_t)(us % 1000000u);
-    if (setsockopt(sock, SOL_SOCKET, recv ? SO_RCVTIMEO : SO_SNDTIMEO,
-                   &tv, sizeof(tv)) != 0)
+    if (setsockopt(
+            sock, SOL_SOCKET, recv ? SO_RCVTIMEO : SO_SNDTIMEO,
+            &tv, sizeof(tv)
+        ) != 0
+    )
         return _ccnet_map_os(_ccnet_last_error());
     return CC_NET_OK;
 #endif
@@ -163,34 +168,46 @@ CCINT32 _ccnet_set_timeout(CCNetSocket sock, CCBOOL recv, CCUINT32 us)
 CCINT32 _ccnet_tcp_keepalive(CCNetSocket sock)
 {
 #ifdef CC_WINDOWS
+    // Winsock 的 keepalive 参数：时间单位为毫秒
     struct tcp_keepalive ka;
     DWORD bytes = 0;
 
     ka.onoff = 1;
     ka.keepalivetime = (u_long)(CC_NET_KEEPALIVE_IDLE_SEC * 1000);
     ka.keepaliveinterval = (u_long)(CC_NET_KEEPALIVE_INTERVAL_SEC * 1000);
-    if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &ka, sizeof(ka),
-                 NULL, 0, &bytes, NULL, NULL) == SOCKET_ERROR)
+    if (WSAIoctl(
+            sock, SIO_KEEPALIVE_VALS, &ka, sizeof(ka),
+            NULL, 0, &bytes, NULL, NULL
+        ) == SOCKET_ERROR
+    )
         return _ccnet_map_os(_ccnet_last_error());
     return CC_NET_OK;
 #else
+    // 开关量的 optval 按 POSIX 约定为 int
     int on = 1;
 
     if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) != 0)
         return _ccnet_map_os(_ccnet_last_error());
 
+    // 空闲时间、探测间隔与次数：optval 均为 int，单位依次为秒、秒、次
 #if defined(TCP_KEEPIDLE)
     {
         int idle = CC_NET_KEEPALIVE_IDLE_SEC;
-        if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE,
-                       &idle, sizeof(idle)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPIDLE,
+                &idle, sizeof(idle)
+            ) != 0
+        )
             return _ccnet_map_os(_ccnet_last_error());
     }
 #elif defined(TCP_KEEPALIVE)
     {
         int idle = CC_NET_KEEPALIVE_IDLE_SEC;
-        if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE,
-                       &idle, sizeof(idle)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPALIVE,
+                &idle, sizeof(idle)
+            ) != 0
+        )
             return _ccnet_map_os(_ccnet_last_error());
     }
 #endif
@@ -198,8 +215,11 @@ CCINT32 _ccnet_tcp_keepalive(CCNetSocket sock)
 #if defined(TCP_KEEPINTVL)
     {
         int interval = CC_NET_KEEPALIVE_INTERVAL_SEC;
-        if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL,
-                       &interval, sizeof(interval)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPINTVL,
+                &interval, sizeof(interval)
+            ) != 0
+        )
             return _ccnet_map_os(_ccnet_last_error());
     }
 #endif
@@ -207,8 +227,11 @@ CCINT32 _ccnet_tcp_keepalive(CCNetSocket sock)
 #if defined(TCP_KEEPCNT)
     {
         int count = CC_NET_KEEPALIVE_COUNT;
-        if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT,
-                       &count, sizeof(count)) != 0)
+        if (setsockopt(
+                sock, IPPROTO_TCP, TCP_KEEPCNT,
+                &count, sizeof(count)
+            ) != 0
+        )
             return _ccnet_map_os(_ccnet_last_error());
     }
 #endif
@@ -218,6 +241,7 @@ CCINT32 _ccnet_tcp_keepalive(CCNetSocket sock)
 
 CCINT32 _ccnet_poll(CCNetSocket sock, CCBOOL write, CCUINT32 us)
 {
+    // poll / WSAPoll 的超时单位为毫秒、以 int 传参；-1 表示无限等待
     int timeout_ms;
     us = _ccnet_norm_timeout(us);
     if (us == CC_NET_TIMEOUT_INFINITE)
@@ -265,11 +289,13 @@ CCINT32 _ccnet_poll(CCNetSocket sock, CCBOOL write, CCUINT32 us)
 CCINT32 _ccnet_set_blocking(CCNetSocket sock, CCBOOL blocking)
 {
 #ifdef CC_WINDOWS
+    // ioctlsocket 的开关量为 u_long：0 表示阻塞，非 0 表示非阻塞
     u_long mode = blocking ? 0u : 1u;
     if (ioctlsocket(sock, FIONBIO, &mode) == SOCKET_ERROR)
         return _ccnet_map_os(_ccnet_last_error());
     return CC_NET_OK;
 #else
+    // fcntl 的状态字与 O_NONBLOCK 标志按 POSIX 约定为 int
     int flags = fcntl(sock, F_GETFL, 0);
     if (flags < 0)
         return _ccnet_map_os(_ccnet_last_error());

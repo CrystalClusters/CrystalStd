@@ -1,4 +1,8 @@
 /*
+ * @Author: Renascent Adore lizaterop@gmail.com
+ * @Date: 2026-09
+ * @LastEditors: Renascent Adore lizaterop@gmail.com
+ * @LastEditTime: 2026-11
  * @Description: 测试用例状态、统计与控制台失败输出。
  *               不维护用例注册表；用例编号只在测试代码的 CC_CASE 中显式出现。
  * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
@@ -35,21 +39,28 @@ static char g_suite[64] = "TEST";
 static CCBOOL g_case_active = CCFALSE;
 static char g_case_id[64] = "";
 static char g_case_name[CC_TEST_NAME_MAX] = "";
-static int g_case_checks = 0;
-static int g_case_failed = 0;
+static CCINT32 g_case_checks = 0;
+static CCINT32 g_case_failed = 0;
 
 static CCUINT32 g_harness_errors = 0;
 
 static void harness_error(const char *text)
 {
     g_harness_errors++;
-    color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[HARNESS][FAIL] %s\n",
-                text ? text : "");
+    color_print(
+        CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[HARNESS][FAIL] %s\n",
+        text ? text : ""
+    );
     fflush(stdout);
 }
 
-static void format_detail(char *out, CCUINT32 cap, const char *label,
-                          const char *expected, const char *actual)
+static void format_detail(
+    char *out,
+    CCUINT32 cap,
+    const char *label,
+    const char *expected,
+    const char *actual
+)
 {
     const char *name = (label && *label) ? label : "(unnamed)";
     if (expected && actual)
@@ -87,7 +98,8 @@ void cc_test_begin(const char *build, const char *level, CCUINT32 seed)
 
 void cc_test_suite_begin(const char *suite, const char *title)
 {
-    if (g_case_active) cc_test_case_end();
+    if (g_case_active)
+        cc_test_case_end();
 
     snprintf(g_suite, sizeof(g_suite), "%s", (suite && *suite) ? suite : "TEST");
     g_suite_pass = 0;
@@ -96,28 +108,38 @@ void cc_test_suite_begin(const char *suite, const char *title)
     g_suite_manual = 0;
     g_suite_checks = 0;
 
-    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "\n== %s (%s) ==\n",
-                (title && *title) ? title : g_suite, g_suite);
+    color_print(
+        CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "\n== %s (%s) ==\n",
+        (title && *title) ? title : g_suite, g_suite
+    );
     fflush(stdout);
 }
 
 void cc_test_suite_end(void)
 {
-    if (g_case_active) cc_test_case_end();
+    if (g_case_active)
+        cc_test_case_end();
 
-    color_print(CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
-                "[%s] total=%d passed=%d failed=%d skipped=%d manual=%d checks=%u\n",
-                g_suite,
-                g_suite_pass + g_suite_fail + g_suite_skip,
-                g_suite_pass, g_suite_fail, g_suite_skip, g_suite_manual,
-                g_suite_checks);
+    color_print(
+        CC_TEXT_COLOR(CC_BCYAN, CC_DEFAULT)
+        "[%s] total=%d passed=%d failed=%d skipped=%d manual=%d checks=%u\n",
+        g_suite,
+        g_suite_pass + g_suite_fail + g_suite_skip,
+        g_suite_pass, g_suite_fail, g_suite_skip, g_suite_manual,
+        g_suite_checks
+    );
     fflush(stdout);
 }
 
-void cc_test_case_begin(const char *id, const char *name,
-                        const char *file, int line)
+void cc_test_case_begin(
+    const char *id,
+    const char *name,
+    const char *file,
+    int line
+)
 {
-    if (g_case_active) cc_test_case_end();
+    if (g_case_active)
+        cc_test_case_end();
 
     if (!id || !*id)
     {
@@ -126,8 +148,10 @@ void cc_test_case_begin(const char *id, const char *name,
     }
 
     snprintf(g_case_id, sizeof(g_case_id), "%s", id);
-    snprintf(g_case_name, sizeof(g_case_name), "%s",
-             (name && *name) ? name : id);
+    snprintf(
+        g_case_name, sizeof(g_case_name), "%s",
+        (name && *name) ? name : id
+    );
     g_case_checks = 0;
     g_case_failed = 0;
     g_case_active = CCTRUE;
@@ -135,9 +159,14 @@ void cc_test_case_begin(const char *id, const char *name,
     (void)line;
 }
 
-void cc_test_check(CCBOOL condition, const char *label,
-                   const char *expected, const char *actual,
-                   const char *file, int line)
+void cc_test_check(
+    CCBOOL condition,
+    const char *label,
+    const char *expected,
+    const char *actual,
+    const char *file,
+    int line
+)
 {
     (void)file;
     (void)line;
@@ -151,43 +180,53 @@ void cc_test_check(CCBOOL condition, const char *label,
     g_case_checks++;
     g_suite_checks++;
     g_checks++;
-    if (condition) return;
+    if (condition)
+        return;
 
     g_case_failed++;
     char detail[CC_TEST_DETAIL_MAX];
     format_detail(detail, sizeof(detail), label, expected, actual);
-    color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[%s][FAIL] %s\n",
-                g_case_id, detail);
+    color_print(
+        CC_TEXT_COLOR(CC_BRED, CC_DEFAULT) "[%s][FAIL] %s\n",
+        g_case_id, detail
+    );
     fflush(stdout);
 }
 
 void cc_test_case_end(void)
 {
-    if (!g_case_active) return;
+    if (!g_case_active)
+        return;
     g_case_active = CCFALSE;
 
     if (g_case_failed > 0)
     {
         g_suite_fail++;
         g_fail++;
-        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
-                    "[%s][FAIL] %s (%d checks, %d failed)\n",
-                    g_case_id, g_case_name, g_case_checks, g_case_failed);
+        color_print(
+            CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+            "[%s][FAIL] %s (%d checks, %d failed)\n",
+            g_case_id, g_case_name, g_case_checks, g_case_failed
+        );
     }
     else if (g_case_checks == 0)
     {
         g_suite_fail++;
         g_fail++;
-        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
-                    "[%s][FAIL] %s (no checks)\n", g_case_id, g_case_name);
+        color_print(
+            CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+            "[%s][FAIL] %s (no checks)\n", g_case_id, g_case_name
+        );
     }
     else
     {
         g_suite_pass++;
         g_pass++;
-        color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
-                    "[%s][PASS] %s (%d checks)\n",
-                    g_case_id, g_case_name, g_case_checks);
+        color_print(
+            CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
+            "[%s][PASS] %s (%d checks)\n",
+            g_case_id, g_case_name, g_case_checks
+        );
     }
     fflush(stdout);
 }
@@ -203,16 +242,22 @@ void cc_test_case_skip(const char *reason)
     g_suite_skip++;
     g_skip++;
 
-    color_print(CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
-                "[%s][SKIP] %s%s%s\n",
-                g_case_id, g_case_name,
-                (reason && *reason) ? ": " : "",
-                (reason && *reason) ? reason : "");
+    color_print(
+        CC_TEXT_COLOR(CC_BYELLOW, CC_DEFAULT)
+        "[%s][SKIP] %s%s%s\n",
+        g_case_id, g_case_name,
+        (reason && *reason) ? ": " : "",
+        (reason && *reason) ? reason : ""
+    );
     fflush(stdout);
 }
 
-void cc_test_manual(const char *id, const char *title,
-                    const char *file, int line)
+void cc_test_manual(
+    const char *id,
+    const char *title,
+    const char *file,
+    int line
+)
 {
     (void)line;
     if (!id || !*id)
@@ -224,8 +269,10 @@ void cc_test_manual(const char *id, const char *title,
     (void)file;
     g_suite_manual++;
     g_manual++;
-    color_print(CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "[%s][MANUAL] %s\n",
-                id, (title && *title) ? title : "");
+    color_print(
+        CC_TEXT_COLOR(CC_BMAGENTA, CC_DEFAULT) "[%s][MANUAL] %s\n",
+        id, (title && *title) ? title : ""
+    );
     fflush(stdout);
 }
 
@@ -233,26 +280,46 @@ void cc_test_print_summary(void)
 {
     if (g_fail == 0 && g_harness_errors == 0)
     {
-        color_print(CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
-                    "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
-                    g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
-                    g_checks, g_harness_errors);
+        color_print(
+            CC_TEXT_COLOR(CC_BGREEN, CC_DEFAULT)
+            "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
+            g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
+            g_checks, g_harness_errors
+        );
     }
     else
     {
-        color_print(CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
-                    "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
-                    g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
-                    g_checks, g_harness_errors);
+        color_print(
+            CC_TEXT_COLOR(CC_BRED, CC_DEFAULT)
+            "\n# SUMMARY total=%d pass=%d fail=%d skip=%d manual=%d checks=%u harness_errors=%u\n",
+            g_pass + g_fail + g_skip, g_pass, g_fail, g_skip, g_manual,
+            g_checks, g_harness_errors
+        );
     }
     fflush(stdout);
 }
 
-CCINT32 cc_test_failures(void) { return g_fail; }
-CCINT32 cc_test_suite_failures(void) { return g_suite_fail; }
-CCUINT32 cc_test_harness_errors(void) { return g_harness_errors; }
+CCINT32 cc_test_failures(void)
+{
+    return g_fail;
+}
+
+CCINT32 cc_test_suite_failures(void)
+{
+    return g_suite_fail;
+}
+
+CCUINT32 cc_test_harness_errors(void)
+{
+    return g_harness_errors;
+}
+
 CCBOOL cc_test_level_full(void)
 {
     return (g_level && strcmp(g_level, "full") == 0) ? CCTRUE : CCFALSE;
 }
-CCUINT32 cc_test_seed(void) { return g_seed; }
+
+CCUINT32 cc_test_seed(void)
+{
+    return g_seed;
+}

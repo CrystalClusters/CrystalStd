@@ -4,7 +4,7 @@
  * @LastEditors: Renascent Adore lizaterop@gmail.com
  * @LastEditTime: 2026-09
  * @Description: color_print的测试
- * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved. 
+ * Copyright (c) 2026 by lizaterop@gmail.com, All Rights Reserved.
  */
 
 #include "test_header.h"
@@ -14,7 +14,7 @@
  * 据此可自动断言返回值契约；颜色本身的呈现（前景/背景/复位）只能人工判断。
  */
 
-/* 自动用例断言：校验 color_print 返回值（可见字符数） */
+// 自动用例断言：校验 color_print 返回值（可见字符数）
 static void _expect_(const char *name, CCINT32 expected, CCINT32 got)
 {
     CC_CHECK_EQ_I64(name, expected, got);
@@ -39,7 +39,7 @@ static void _test_auto_(void)
     _expect_("%x", 11, color_print("%x\n", 0xABCDu));
     _expect_("%ld", 14, color_print("%ld\n", (CCINT64)1234567890123LL));
     _expect_("%s", 4, color_print("%s\n", "abc"));
-    _expect_("%s null", 7, color_print("%s\n", (const char*)NULL));
+    _expect_("%s null", 7, color_print("%s\n", (const char *)NULL));
     _expect_("%c", 2, color_print("%c\n", 'x'));
     _expect_("%% literal", 2, color_print("%%\n"));
     _expect_("%f", 9, color_print("%f\n", 1.5));
