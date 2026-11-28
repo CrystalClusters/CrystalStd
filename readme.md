@@ -47,7 +47,7 @@ build.bat
 build.bat release
 ```
 
-RELEASE 使用 `-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror`，DEBUG 使用 `-O0 -g3 -Wall -Wextra`；Windows 两种模式均额外追加 `-fexec-charset=GBK`。编译选项由顶层脚本统一传给 `scripts/build_*.sh` / `.bat` 子脚本。
+RELEASE 使用 `-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror -fPIC`，DEBUG 使用 `-O0 -g3 -Wall -Wextra -fPIC`；Windows 两种模式均额外追加 `-fexec-charset=GBK`。编译选项由顶层脚本统一传给 `scripts/build_*.sh` / `.bat` 子脚本。
 
 **构建流程：**
 

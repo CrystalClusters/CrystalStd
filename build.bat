@@ -9,10 +9,10 @@ echo 当前平台为：【%PLATFORM_STR%】
 
 :: 构建模式：仅显式传入 release 时启用发行构建
 set "BUILD_MODE=DEBUG"
-set "CC_BUILD_CFLAGS=-O0 -g3 -Wall -Wextra -fexec-charset=GBK"
+set "CC_BUILD_CFLAGS=-O0 -g3 -Wall -Wextra -fPIC -fexec-charset=GBK"
 if /i "%~1"=="release" (
     set "BUILD_MODE=RELEASE"
-    set "CC_BUILD_CFLAGS=-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror -fexec-charset=GBK"
+    set "CC_BUILD_CFLAGS=-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror -fPIC -fexec-charset=GBK"
 ) else (
     if not "%~1"=="" echo [提示] 未知构建模式：%~1，按 DEBUG 构建。
 )

@@ -7,6 +7,7 @@
 - 模块：ccpath、cc_encoding、cchost、cc_hash、ccfiles。
 - 变更：新增宿主路径工具、UTF-8/本地编码转换、宿主文件系统 Shell 能力、MD5 摘要接口；ccfiles 增加带深度与相对路径的检索接口、节点真实路径反查接口和 `CC_FS_ERR_NOPHYS` 错误码。
 - 文档：新增《代码风格指南》，补充新模块、测试用例与快速入门文档。
+- 构建：Debug / Release 编译选项加入 `-fPIC`。
 
 ## v1.0.2（2026-11-26）
 

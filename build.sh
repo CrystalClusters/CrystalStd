@@ -3,11 +3,11 @@ set -e
 
 # 构建模式：仅显式传入 release 时启用发行构建
 BUILD_MODE="DEBUG"
-CC_BUILD_CFLAGS="-O0 -g3 -Wall -Wextra"
+CC_BUILD_CFLAGS="-O0 -g3 -Wall -Wextra -fPIC"
 case "${1:-}" in
     [Rr][Ee][Ll][Ee][Aa][Ss][Ee])
         BUILD_MODE="RELEASE"
-        CC_BUILD_CFLAGS="-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror"
+        CC_BUILD_CFLAGS="-O2 -DNDEBUG -DCC_RELEASE -Wall -Wextra -Werror -fPIC"
         ;;
     "")
         ;;
