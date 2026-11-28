@@ -21,9 +21,11 @@ static const char utf8_cn[] = {
     (char)0xE6, (char)0x96, (char)0x87, '\0'
 };
 
+#ifdef CC_WINDOWS
 static const char gbk_cn[] = {
     (char)0xD6, (char)0xD0, (char)0xCE, (char)0xC4, '\0'
 };
+#endif
 
 void test_cc_encoding(void)
 {
